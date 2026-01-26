@@ -1,0 +1,8 @@
+mvn archetype:generate `
+    -DarchetypeGroupId=org.openjfx `
+    -DarchetypeArtifactId=javafx-archetype-fxml `
+    -DarchetypeVersion=0.0.6 `
+    -DgroupId=com.monitoring `
+    -DartifactId=desktop-agent `
+    -Dversion=1.0.0 `
+    -Djavafx-version=21

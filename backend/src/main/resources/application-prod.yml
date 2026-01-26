@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/employee_monitoring
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: postgres
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  
+  h2:
+    console:
+      enabled: false
+
+monitoring:
+  screenshot:
+    storage-path: /var/monitoring/screenshots
+
+logging:
+  level:
+    com.monitoring: INFO
+    org.springframework.web: WARN

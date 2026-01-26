@@ -1,0 +1,16 @@
+package com.monitoring.repository;
+
+import com.monitoring.entity.ActivityLog;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
+    List<ActivityLog> findBySessionIdOrderByLoggedAtAsc(UUID sessionId);
+
+    List<ActivityLog> findBySessionIdAndLoggedAtAfterOrderByLoggedAtDesc(UUID sessionId, LocalDateTime after);
+}

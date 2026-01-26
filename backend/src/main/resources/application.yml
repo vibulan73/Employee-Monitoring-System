@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: employee-monitoring-backend
+  
+  # # Default profile (H2 for development)
+  # datasource:
+  #   url: jdbc:h2:file:./data/monitoring;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
+  #   driver-class-name: org.h2.Driver
+  #   username: sa
+  #   password: 
+
+   # Default profile (H2 for development)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/monitordb
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: 4321
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    # show-sql: true
+    properties:
+      hibernate:
+        # format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # File upload configuration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # Email Configuration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: vibulan73@gmail.com
+    password: wmkd ccff ykye mqkr
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+server:
+  port: 8080
+
+# Application specific configuration
+monitoring:
+  screenshot:
+    storage-path: ./screenshots
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+  admin:
+    email: vibulan73@gmail.com
+  idle:
+    warning-minutes: 1
+    auto-stop-minutes: 2
+    check-interval-minutes: 1
+
+# Application timezone for login rule evaluation
+app:
+  timezone: UTC  # Configure as needed: UTC, America/New_York, Asia/Kolkata, etc.
+
+# Logging
+logging:
+  level:
+    com.monitoring: DEBUG
+    org.springframework.web: INFO
+    org.hibernate: INFO
