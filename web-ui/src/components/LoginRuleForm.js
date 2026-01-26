@@ -26,6 +26,7 @@ function LoginRuleForm() {
         } else {
             initializeSchedules('ALL_DAYS');
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     const fetchLoginRule = async () => {

@@ -29,6 +29,7 @@ function Dashboard() {
         return () => {
             websocketService.unsubscribe('/topic/sessions');
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Refetch when filters change
@@ -36,6 +37,7 @@ function Dashboard() {
         if (filterUserId || filterStatus) {
             fetchSessions();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterUserId, filterStatus]);
 
     const fetchSessions = async () => {

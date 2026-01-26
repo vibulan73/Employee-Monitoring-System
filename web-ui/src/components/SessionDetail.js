@@ -51,6 +51,7 @@ function SessionDetail() {
             websocketService.unsubscribe(`/topic/screenshots/${sessionId}`);
             websocketService.unsubscribe('/topic/sessions');
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionId]);
 
     const fetchSessionData = async () => {

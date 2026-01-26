@@ -30,7 +30,7 @@ export const getMyLoginRule = (userId) => {
     });
 };
 
-export default {
+const loginRuleService = {
     getAllLoginRules,
     getLoginRuleById,
     createLoginRule,
@@ -38,3 +38,5 @@ export default {
     deleteLoginRule,
     getMyLoginRule
 };
+
+export default loginRuleService;
