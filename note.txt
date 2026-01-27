@@ -1,18 +1,22 @@
 
 # ------------------------------------------------------------------
-# 6. Final CORS Fix (Wildcard Support)
+# 7. Troubleshooting Email Failure
 # ------------------------------------------------------------------
-# I modified the backend code to support "Wildcards" (*).
-# This means you won't have to update Render every time Vercel creates a new URL.
+# Your application logs show a "MailConnectException" (from your earlier logs).
+# This usually happens if the environment variables for email are missing or incorrect on Render.
 
-# Action 1: Pushing Code (I am doing this now)
-# Pushing "Enable Wildcard CORS" to GitHub.
-
-# Action 2: Update Render Env Var (Wait for "Live", then do this)
+# ACTION: Check Render Environment Variables
 # 1. Go to Render Dashboard -> Backend -> Environment Variables.
-# 2. Update `ALLOWED_ORIGINS` to:
-https://*.vercel.app,http://localhost:3000
+# 2. Check if the following variables exist and are correct:
 
-# (Note the star * - this allows ALL Vercel apps)
+# MAIL_USERNAME: vibulan73@gmail.com
+# MAIL_PASSWORD: is this set to your App Password (16 characters)? 
+# ADMIN_EMAIL: vibulan73@gmail.com
 
-# 3. Save -> Redeploy -> Test.
+# IF THEY ARE MISSING:
+# Add them now! 
+# Your local code has defaults, but CLOUD code needs these to be manually set in Render.
+
+# IF THEY EXIST:
+# 1. Verify the App Password is correct (try generating a new one in Google Account -> Security -> 2-Step Verification -> App Passwords).
+# 2. Update the MAIL_PASSWORD variable in Render.
