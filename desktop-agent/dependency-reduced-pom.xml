@@ -4,7 +4,7 @@
   <groupId>com.monitoring</groupId>
   <artifactId>desktop-agent</artifactId>
   <name>Desktop Monitoring Agent</name>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <description>Desktop agent for employee activity monitoring</description>
   <build>
     <plugins>
@@ -36,7 +36,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.monitoring.agent.MonitoringAgent</mainClass>
+                  <mainClass>com.monitoring.agent.Launcher</mainClass>
                 </transformer>
               </transformers>
             </configuration>

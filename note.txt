@@ -1,8 +1,18 @@
-mvn archetype:generate `
-    -DarchetypeGroupId=org.openjfx `
-    -DarchetypeArtifactId=javafx-archetype-fxml `
-    -DarchetypeVersion=0.0.6 `
-    -DgroupId=com.monitoring `
-    -DartifactId=desktop-agent `
-    -Dversion=1.0.0 `
-    -Djavafx-version=21
+
+# ------------------------------------------------------------------
+# 6. Final CORS Fix (Wildcard Support)
+# ------------------------------------------------------------------
+# I modified the backend code to support "Wildcards" (*).
+# This means you won't have to update Render every time Vercel creates a new URL.
+
+# Action 1: Pushing Code (I am doing this now)
+# Pushing "Enable Wildcard CORS" to GitHub.
+
+# Action 2: Update Render Env Var (Wait for "Live", then do this)
+# 1. Go to Render Dashboard -> Backend -> Environment Variables.
+# 2. Update `ALLOWED_ORIGINS` to:
+https://*.vercel.app,http://localhost:3000
+
+# (Note the star * - this allows ALL Vercel apps)
+
+# 3. Save -> Redeploy -> Test.

@@ -29,7 +29,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Register the WebSocket endpoint that clients will connect to
         // with SockJS fallback for browsers that don't support WebSocket
         registry.addEndpoint("/api/ws")
-                .setAllowedOrigins(allowedOrigins)
+                .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS();
     }
 }
