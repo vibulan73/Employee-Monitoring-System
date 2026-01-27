@@ -24,7 +24,7 @@ RUN echo '#!/bin/sh' > entrypoint.sh && \
     echo '  fi' >> entrypoint.sh && \
     echo '  export DB_URL="$clean_url"' >> entrypoint.sh && \
     echo 'fi' >> entrypoint.sh && \
-    echo 'exec java -jar app.jar' >> entrypoint.sh && \
+    echo 'exec java -Djava.net.preferIPv4Stack=true -jar app.jar' >> entrypoint.sh && \
     chmod +x entrypoint.sh
 
 EXPOSE 8080

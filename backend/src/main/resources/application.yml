@@ -44,14 +44,15 @@ spring:
     password: ${MAIL_PASSWORD:zmnj ritu exdw ykau}
     properties:
       mail:
+        debug: true
         smtp:
           auth: true
           ssl:
             enable: true
             trust: smtp.gmail.com
-          connectiontimeout: 10000
-          timeout: 10000
-          writetimeout: 10000
+          connectiontimeout: 60000
+          timeout: 60000
+          writetimeout: 60000
 
 server:
   port: ${PORT:8080}
