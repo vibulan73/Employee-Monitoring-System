@@ -1,10 +1,6 @@
 import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
-console.log('LoginRuleService Config:', {
-    envVar: process.env.REACT_APP_API_URL,
-    resolvedUrl: API_BASE_URL
-});
 
 // Login Rule APIs (Admin only)
 export const getAllLoginRules = () => {
