@@ -39,19 +39,16 @@ spring:
   # Email Configuration
   mail:
     host: smtp.gmail.com
-    port: 587
+    port: 465
     username: ${MAIL_USERNAME:vibulan73@gmail.com}
     password: ${MAIL_PASSWORD:zmnj ritu exdw ykau}
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
-            enable: true
-            required: true
           ssl:
+            enable: true
             trust: smtp.gmail.com
-            protocols: TLSv1.2
           connectiontimeout: 10000
           timeout: 10000
           writetimeout: 10000
