@@ -49,9 +49,12 @@ spring:
           starttls:
             enable: true
             required: true
-          connectiontimeout: 15000
-          timeout: 15000
-          writetimeout: 15000
+          ssl:
+            trust: smtp.gmail.com
+            protocols: TLSv1.2
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
 server:
   port: ${PORT:8080}
@@ -74,7 +77,7 @@ monitoring:
 
 # Application timezone for login rule evaluation
 app:
-  timezone: UTC  # Configure as needed: UTC, America/New_York, Asia/Kolkata, etc.
+  timezone: Asia/Colombo  # Sri Lanka Standard Time
 
 # Logging
 logging:
