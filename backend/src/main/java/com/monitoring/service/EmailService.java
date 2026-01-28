@@ -47,10 +47,6 @@ public class EmailService {
             String[] cc = parseEmailList(ccEmails);
             String[] bcc = parseEmailList(bccEmails);
 
-            log.debug("Raw Admin Emails: '{}', Parsed To: {}", adminEmails, java.util.Arrays.toString(to));
-            log.debug("Raw CC Emails: '{}', Parsed CC: {}", ccEmails, java.util.Arrays.toString(cc));
-            log.debug("Raw BCC Emails: '{}', Parsed BCC: {}", bccEmails, java.util.Arrays.toString(bcc));
-
             sendHtmlEmail(to, cc, bcc, subject, body);
             log.info("Idle warning email sent for user {} ({})", userId, sessionId);
         } catch (Exception e) {
