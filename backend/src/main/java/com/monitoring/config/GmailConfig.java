@@ -38,6 +38,9 @@ public class GmailConfig {
     @Value("${gmail.tokens.directory-path:tokens}")
     private String tokensDirectoryPath;
 
+    @Value("${GMAIL_TOKEN_BASE64:}")
+    private String gmailTokenBase64;
+
     @Bean
     public Gmail gmailService() throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -52,6 +55,24 @@ public class GmailConfig {
             in = GmailConfig.class.getResourceAsStream("/credentials.json");
             if (in == null) {
                 throw new FileNotFoundException("Resource not found: " + credentialsFilePath);
+            }
+        }
+
+        // Handle Base64 Token injection (for Render/Cloud deployment)
+        if (gmailTokenBase64 != null && !gmailTokenBase64.isEmpty()) {
+            java.io.File tokensDir = new java.io.File(tokensDirectoryPath);
+            if (!tokensDir.exists()) {
+                tokensDir.mkdirs();
+            }
+            java.io.File tokenFile = new java.io.File(tokensDir, "StoredCredential");
+            if (!tokenFile.exists()) {
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(tokenFile)) {
+                    byte[] tokenBytes = java.util.Base64.getDecoder().decode(gmailTokenBase64);
+                    fos.write(tokenBytes);
+                    System.out.println("Restored 'StoredCredential' from Base64 environment variable.");
+                } catch (IllegalArgumentException e) {
+                    System.err.println("Failed to decode GMAIL_TOKEN_BASE64: " + e.getMessage());
+                }
             }
         }
 
