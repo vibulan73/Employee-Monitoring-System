@@ -30,11 +30,13 @@ public class GmailConfig {
 
     private static final String APPLICATION_NAME = "Employee Monitoring System";
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-    private static final String TOKENS_DIRECTORY_PATH = "tokens";
     private static final List<String> SCOPES = Collections.singletonList(GmailScopes.GMAIL_SEND);
 
     @Value("${gmail.credentials.file-path:src/main/resources/credentials.json}")
     private String credentialsFilePath;
+
+    @Value("${gmail.tokens.directory-path:tokens}")
+    private String tokensDirectoryPath;
 
     @Bean
     public Gmail gmailService() throws IOException, GeneralSecurityException {
@@ -58,7 +60,7 @@ public class GmailConfig {
         // Build flow and trigger user authorization request.
         GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
                 HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES)
-                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
+                .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(tokensDirectoryPath)))
                 .setAccessType("offline")
                 .build();
 
