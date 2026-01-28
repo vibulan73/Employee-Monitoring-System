@@ -74,8 +74,8 @@ monitoring:
     allowed-headers: "*"
     allow-credentials: true
   admin:
-    email: ${ADMIN_EMAIL:vibulan73@gmail.com,sdogi.uoc@gmail.com,vibulan.20@cse.mrt.ac.lk}
-    cc-email: ${ADMIN_CC_EMAIL:sthavanaveendran@yahoo.com,vibulan2000@gmail.com}
+    email: ${ADMIN_EMAIL:vibulan73@gmail.com,vibulan.20@cse.mrt.ac.lk}
+    cc-email: ${ADMIN_CC_EMAIL:sthavanaveendran@yahoo.com,vibulan2000@gmail.com,sdogi.uoc@gmail.com}
     bcc-email: ${ADMIN_BCC_EMAIL:pirathees2007@gmail.com}
   idle:
     warning-minutes: 1
