@@ -78,14 +78,16 @@ public class GmailConfig {
                 tokensDir.mkdirs();
             }
             java.io.File tokenFile = new java.io.File(tokensDir, "StoredCredential");
-            if (!tokenFile.exists()) {
-                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(tokenFile)) {
-                    byte[] tokenBytes = java.util.Base64.getDecoder().decode(gmailTokenBase64);
-                    fos.write(tokenBytes);
-                    System.out.println("Restored 'StoredCredential' from Base64 environment variable.");
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Failed to decode GMAIL_TOKEN_BASE64: " + e.getMessage());
-                }
+            // Always overwrite to ensure we have the valid token from Env Var
+            // This fixes issues where a corrupted empty file exists on the server
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(tokenFile, false)) {
+                byte[] tokenBytes = java.util.Base64.getDecoder().decode(gmailTokenBase64);
+                fos.write(tokenBytes);
+                System.out.println("Restored 'StoredCredential' from Base64 environment variable (Overwritten).");
+            } catch (IllegalArgumentException e) {
+                System.err.println("Failed to decode GMAIL_TOKEN_BASE64: " + e.getMessage());
+            } catch (IOException e) {
+                System.err.println("Failed to write StoredCredential: " + e.getMessage());
             }
         }
 
