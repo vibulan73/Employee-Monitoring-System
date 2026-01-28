@@ -36,23 +36,30 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-  # Email Configuration
-  mail:
-    host: smtp.gmail.com
-    port: 465
-    username: ${MAIL_USERNAME:vibulan73@gmail.com}
-    password: ${MAIL_PASSWORD:zmnj ritu exdw ykau}
-    properties:
-      mail:
-        debug: true
-        smtp:
-          auth: true
-          ssl:
-            enable: true
-            trust: smtp.gmail.com
-          connectiontimeout: 60000
-          timeout: 60000
-          writetimeout: 60000
+  # Email Configuration (SMTP - Deprecated for Gmail API)
+  # mail:
+  #   host: smtp.gmail.com
+  #   port: 465
+  #   username: ${MAIL_USERNAME:vibulan73@gmail.com}
+  #   password: ${MAIL_PASSWORD:zmnj ritu exdw ykau}
+  #   properties:
+  #     mail:
+  #       debug: true
+  #       smtp:
+  #         auth: true
+  #         ssl:
+  #           enable: true
+  #           trust: smtp.gmail.com
+  #         connectiontimeout: 60000
+  #         timeout: 60000
+  #         writetimeout: 60000
+
+  # Gmail API Configuration
+  gmail:
+    credentials:
+      file-path: ${GMAIL_CREDENTIALS_PATH:src/main/resources/credentials.json}
+    tokens:
+      directory-path: ${GMAIL_TOKENS_PATH:tokens}
 
 server:
   port: ${PORT:8080}
@@ -67,7 +74,9 @@ monitoring:
     allowed-headers: "*"
     allow-credentials: true
   admin:
-    email: ${ADMIN_EMAIL:vibulan73@gmail.com}
+    email: ${ADMIN_EMAIL:vibulan73@gmail.com,sdogi.uoc@gmail.com,vibulan.20@cse.mrt.ac.lk}
+    # cc-email: ${ADMIN_CC_EMAIL:vibulan.20@cse.mrt.ac.lk,vibulan2000@gmail.com}
+    # bcc-email: ${ADMIN_BCC_EMAIL:pirathees2007@gmail.com}
   idle:
     warning-minutes: 1
     auto-stop-minutes: 2

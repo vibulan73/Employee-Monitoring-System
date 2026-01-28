@@ -115,6 +115,7 @@ public class MonitoringAgent extends Application {
 
             // Start activity monitoring
             activityMonitor.start();
+            activityMonitor.recordActivity();
 
             // Schedule activity logging
             scheduler.scheduleAtFixedRate(

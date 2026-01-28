@@ -1,16 +1,22 @@
 package com.monitoring.service;
 
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException;
+import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import java.util.Properties;
 import java.util.UUID;
 
 @Service
@@ -18,10 +24,16 @@ import java.util.UUID;
 @Slf4j
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    private final Gmail gmailService;
 
     @Value("${monitoring.admin.email}")
-    private String adminEmail;
+    private String adminEmails;
+
+    @Value("${monitoring.admin.cc-email:}")
+    private String ccEmails;
+
+    @Value("${monitoring.admin.bcc-email:}")
+    private String bccEmails;
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy hh:mm a");
 
@@ -31,7 +43,11 @@ public class EmailService {
             String subject = "⚠️ Idle Alert: " + firstName + " " + lastName + " - " + idleMinutes + " Minutes Idle";
             String body = buildIdleWarningEmailBody(sessionId, userId, firstName, lastName, jobRole, idleMinutes);
 
-            sendHtmlEmail(adminEmail, subject, body);
+            String[] to = parseEmailList(adminEmails);
+            String[] cc = parseEmailList(ccEmails);
+            String[] bcc = parseEmailList(bccEmails);
+
+            sendHtmlEmail(to, cc, bcc, subject, body);
             log.info("Idle warning email sent for user {} ({})", userId, sessionId);
         } catch (Exception e) {
             log.error("Failed to send idle warning email for user {}", userId, e);
@@ -45,23 +61,52 @@ public class EmailService {
                     + "+ Minutes Idle";
             String body = buildAutoStopEmailBody(sessionId, userId, firstName, lastName, jobRole, idleMinutes);
 
-            sendHtmlEmail(adminEmail, subject, body);
+            String[] to = parseEmailList(adminEmails);
+            String[] cc = parseEmailList(ccEmails);
+            String[] bcc = parseEmailList(bccEmails);
+
+            sendHtmlEmail(to, cc, bcc, subject, body);
             log.info("Auto-stop notification email sent for user {} ({})", userId, sessionId);
         } catch (Exception e) {
             log.error("Failed to send auto-stop email for user {}", userId, e);
         }
     }
 
-    private void sendHtmlEmail(String to, String subject, String htmlBody) throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+    private void sendHtmlEmail(String[] to, String[] cc, String[] bcc, String subject, String htmlBody)
+            throws MessagingException, IOException {
+
+        Session session = Session.getDefaultInstance(new Properties(), null);
+        MimeMessage mimeMessage = new MimeMessage(session);
+        MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
         helper.setTo(to);
+        if (cc != null && cc.length > 0) {
+            helper.setCc(cc);
+        }
+        if (bcc != null && bcc.length > 0) {
+            helper.setBcc(bcc);
+        }
         helper.setSubject(subject);
         helper.setText(htmlBody, true);
-        helper.setFrom("vibul.try@gmail.com");
+        helper.setFrom("vibul.try@gmail.com"); // Still used for MimeMessage, but Gmail API uses authenticated user's
+                                               // address
 
-        mailSender.send(message);
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        mimeMessage.writeTo(buffer);
+        byte[] bytes = buffer.toByteArray();
+        String encodedEmail = Base64.getUrlEncoder().encodeToString(bytes);
+
+        Message message = new Message();
+        message.setRaw(encodedEmail);
+
+        gmailService.users().messages().send("me", message).execute();
+    }
+
+    private String[] parseEmailList(String emailString) {
+        if (emailString == null || emailString.trim().isEmpty()) {
+            return new String[0];
+        }
+        return emailString.split("\\s*,\\s*");
     }
 
     private String buildIdleWarningEmailBody(UUID sessionId, String userId, String firstName,

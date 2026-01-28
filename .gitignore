@@ -39,3 +39,9 @@ screenshots/
 *.db
 *.mv.db
 *.trace.db
+
+# Secrets
+credentials.json
+**/credentials.json
+tokens/
+**/tokens/

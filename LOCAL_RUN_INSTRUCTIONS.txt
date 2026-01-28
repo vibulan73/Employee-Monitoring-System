@@ -1,0 +1,49 @@
+
+# ------------------------------------------------------------------
+# HOW TO RUN LOCALLY (LOCALHOST)
+# ------------------------------------------------------------------
+
+# 1. Backend (Spring Boot)
+# File: backend/src/main/resources/application.yml
+# -------------------------------------------------------
+# You don't need to change the code if you have a local PostgreSQL.
+# Just run the JAR (or from IDE) with these environment variables, 
+# OR temporarily hardcode them in application.yml:
+
+# datasource:
+#   url: jdbc:postgresql://localhost:5432/monitordb
+#   username: postgres
+#   password: your_local_db_password
+
+# CORS is already set to allow localhost:3000, so that is fine.
+
+
+# 2. Frontend (React)
+# File: web-ui/.env (Create this file if missing)
+# -------------------------------------------------------
+# Create a file named ".env" in the "web-ui" folder.
+# Add this line:
+REACT_APP_API_URL=http://localhost:8080/api
+
+# Then restart React:
+# cd web-ui
+# npm start
+
+
+# 3. Desktop Agent
+# File: desktop-agent/src/main/resources/agent.properties
+# -------------------------------------------------------
+# Update the URL to point to your local backend.
+
+backend.url=http://localhost:8080
+
+
+# ------------------------------------------------------------------
+# SUMMARY OF STEPS
+# ------------------------------------------------------------------
+# 1. Start Local PostgreSQL (make sure 'monitordb' exists).
+# 2. Run Backend (Main class or mvn spring-boot:run).
+# 3. Update agent.properties -> http://localhost:8080.
+# 4. Run Desktop Agent.
+# 5. Create .env in web-ui -> http://localhost:8080/api.
+# 6. Run Web UI (npm start).

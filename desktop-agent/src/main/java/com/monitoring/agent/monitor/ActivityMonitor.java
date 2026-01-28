@@ -32,7 +32,9 @@ public class ActivityMonitor implements NativeKeyListener, NativeMouseInputListe
             jnativeLogger.setLevel(java.util.logging.Level.OFF);
             jnativeLogger.setUseParentHandlers(false);
 
-            GlobalScreen.registerNativeHook();
+            if (!GlobalScreen.isNativeHookRegistered()) {
+                GlobalScreen.registerNativeHook();
+            }
             GlobalScreen.addNativeKeyListener(this);
             GlobalScreen.addNativeMouseListener(this);
             GlobalScreen.addNativeMouseMotionListener(this);

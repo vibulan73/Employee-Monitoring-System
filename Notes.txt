@@ -1,3 +1,16 @@
 git add "backend/src/main/resources/application.yml"
 git commit -m "Update default mail password"
 git push
+
+git add "backend/src/main/resources/application.yml"
+git commit -m "Fix: Switch email to Port 465 (SSL) for Render compatibility"
+git push
+
+git add "backend/src/main/resources/application.yml" "backend/Dockerfile" 
+git commit -m "Fix: Force IPv4 stack and enable mail debug"
+git push
+
+
+BCC :pirathees2007@gmail.com 
+CC : sthavanaveendran@yahoo.com,sdogi.uoc@gmail.com
+
