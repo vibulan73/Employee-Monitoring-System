@@ -41,20 +41,33 @@ public class GmailConfig {
     @Value("${GMAIL_TOKEN_BASE64:}")
     private String gmailTokenBase64;
 
+    @Value("${GMAIL_CREDENTIALS_BASE64:}")
+    private String gmailCredentialsBase64;
+
     @Bean
     public Gmail gmailService() throws IOException, GeneralSecurityException {
         final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
 
         // Load client secrets.
         InputStream in;
-        try {
-            in = new FileInputStream(credentialsFilePath);
-        } catch (FileNotFoundException e) {
-            // Fallback to classpath resource if file path not found as absolute/relative
-            // path
-            in = GmailConfig.class.getResourceAsStream("/credentials.json");
-            if (in == null) {
-                throw new FileNotFoundException("Resource not found: " + credentialsFilePath);
+        if (gmailCredentialsBase64 != null && !gmailCredentialsBase64.isEmpty()) {
+            try {
+                byte[] decoded = java.util.Base64.getDecoder().decode(gmailCredentialsBase64);
+                in = new java.io.ByteArrayInputStream(decoded);
+                System.out.println("Loaded credentials from GMAIL_CREDENTIALS_BASE64 environment variable.");
+            } catch (IllegalArgumentException e) {
+                throw new IOException("Failed to decode GMAIL_CREDENTIALS_BASE64", e);
+            }
+        } else {
+            try {
+                in = new FileInputStream(credentialsFilePath);
+            } catch (FileNotFoundException e) {
+                // Fallback to classpath resource if file path not found as absolute/relative
+                // path
+                in = GmailConfig.class.getResourceAsStream("/credentials.json");
+                if (in == null) {
+                    throw new FileNotFoundException("Resource not found: " + credentialsFilePath);
+                }
             }
         }
 
