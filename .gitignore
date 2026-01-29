@@ -46,5 +46,7 @@ credentials.json
 tokens/
 **/tokens/
 
-*.note.txt
-*.Notes.txt
+# Notes
+note.txt
+Notes.txt
+

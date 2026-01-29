@@ -1,4 +1,0 @@
-BCC :pirathees2007@gmail.com 
-CC : sthavanaveendran@yahoo.com,sdogi.uoc@gmail.com
-
-git commit -m "feat(email): migrate from SMTP to Gmail API"
