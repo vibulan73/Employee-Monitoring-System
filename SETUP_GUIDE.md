@@ -37,6 +37,42 @@ java --version
 
 ---
 
+---
+
+## 🔐 Environment Configuration
+
+This project uses `.env` files to store sensitive configuration (database credentials, API keys, etc.). You **must** create these files before running the applications.
+
+### 1. Backend Configuration
+1. Navigate to the `backend/` directory.
+2. Copy `.env.example` to a new file named `.env`.
+   ```powershell
+   cd backend
+   copy .env.example .env
+   ```
+3. Open `.env` and fill in your actual values (Database URL, User, Password, Gmail paths, etc.).
+   > **Note:** The default database configuration uses `jdbc:postgresql://localhost:5432/monitordb`. Ensure this database exists or update the `DB_URL` in `.env`.
+
+### 2. Desktop Agent Configuration
+1. Navigate to the `desktop-agent/` directory.
+2. Copy `.env.example` to a new file named `.env`.
+   ```powershell
+   cd desktop-agent
+   copy .env.example .env
+   ```
+3. Open `.env` and update `BACKEND_URL` if your backend is not running on `localhost:8080`.
+
+### 3. Web UI Configuration
+1. Navigate to the `web-ui/` directory.
+2. Copy `.env.example` to `.env` (or `.env.local`).
+   ```powershell
+   cd web-ui
+   copy .env.example .env
+   ```
+3. Ensure `REACT_APP_API_URL` points to your backend.
+
+---
+
 ## 🚀 Running the System
 
 ### Option A: Using IntelliJ IDEA or Eclipse (Recommended)
