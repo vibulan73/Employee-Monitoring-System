@@ -11,10 +11,10 @@ spring:
 
    # Default profile (H2 for development)
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/monitordb}
+    url: ${DB_URL}
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:4321}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   
   jpa:
     hibernate:
@@ -40,8 +40,8 @@ spring:
   # mail:
   #   host: smtp.gmail.com
   #   port: 465
-  #   username: ${MAIL_USERNAME:vibulan73@gmail.com}
-  #   password: ${MAIL_PASSWORD:zmnj ritu exdw ykau}
+  #   username: ${MAIL_USERNAME}
+  #   password: ${MAIL_PASSWORD}
   #   properties:
   #     mail:
   #       debug: true
@@ -57,26 +57,26 @@ spring:
   # Gmail API Configuration
   gmail:
     credentials:
-      file-path: ${GMAIL_CREDENTIALS_PATH:src/main/resources/credentials.json}
+      file-path: ${GMAIL_CREDENTIALS_PATH}
     tokens:
-      directory-path: ${GMAIL_TOKENS_PATH:tokens}
+      directory-path: ${GMAIL_TOKENS_PATH}
 
 server:
-  port: ${PORT:8080}
+  port: ${PORT}
 
 # Application specific configuration
 monitoring:
   screenshot:
-    storage-path: ${SCREENSHOT_PATH:./screenshots}
+    storage-path: ${SCREENSHOT_PATH}
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins: ${ALLOWED_ORIGINS}
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS
     allowed-headers: "*"
     allow-credentials: true
   admin:
-    email: ${ADMIN_EMAIL:vibulan73@gmail.com,vibulan.20@cse.mrt.ac.lk}
-    cc-email: ${ADMIN_CC_EMAIL:sthavanaveendran@yahoo.com,vibulan2000@gmail.com,sdogi.uoc@gmail.com}
-    bcc-email: ${ADMIN_BCC_EMAIL:pirathees2007@gmail.com}
+    email: ${ADMIN_EMAIL}
+    cc-email: ${ADMIN_CC_EMAIL}
+    bcc-email: ${ADMIN_BCC_EMAIL}
   idle:
     warning-minutes: 1
     auto-stop-minutes: 2

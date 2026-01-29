@@ -350,22 +350,56 @@ public class MonitoringAgent extends Application {
     private void loadConfiguration() throws IOException {
         Properties props = new Properties();
 
-        // Try to load from classpath
+        // 1. Try to load from .env file (current directory)
+        io.github.cdimascio.dotenv.Dotenv dotenv = null;
+        try {
+            dotenv = io.github.cdimascio.dotenv.Dotenv.configure()
+                    .ignoreIfMissing()
+                    .load();
+            logger.info("Loaded .env file");
+        } catch (Exception e) {
+            logger.warn("Could not load .env file: " + e.getMessage());
+        }
+
+        // 2. Try to load from classpath (agent.properties)
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("agent.properties")) {
             if (input != null) {
                 props.load(input);
-            } else {
-                // Use defaults
-                logger.warn("agent.properties not found, using defaults");
-                setDefaults();
-                return;
             }
+        } catch (Exception e) {
+            logger.warn("Could not load agent.properties", e);
         }
 
-        backendUrl = props.getProperty("backend.url", "http://localhost:8080");
-        screenshotIntervalMinutes = Double.parseDouble(props.getProperty("screenshot.interval.minutes", "5"));
-        idleThresholdSeconds = Integer.parseInt(props.getProperty("activity.idle.threshold.seconds", "60"));
-        activityUpdateIntervalSeconds = Integer.parseInt(props.getProperty("activity.update.interval.seconds", "30"));
+        // Prioritize .env, then properties, then defaults
+
+        // Backend URL
+        if (dotenv != null && dotenv.get("BACKEND_URL") != null) {
+            backendUrl = dotenv.get("BACKEND_URL");
+        } else {
+            backendUrl = props.getProperty("backend.url", "http://localhost:8080");
+        }
+
+        // Screenshot Interval
+        if (dotenv != null && dotenv.get("SCREENSHOT_INTERVAL_MINUTES") != null) {
+            screenshotIntervalMinutes = Double.parseDouble(dotenv.get("SCREENSHOT_INTERVAL_MINUTES"));
+        } else {
+            screenshotIntervalMinutes = Double.parseDouble(props.getProperty("screenshot.interval.minutes", "1"));
+        }
+
+        // Idle Threshold
+        if (dotenv != null && dotenv.get("IDLE_THRESHOLD_SECONDS") != null) {
+            idleThresholdSeconds = Integer.parseInt(dotenv.get("IDLE_THRESHOLD_SECONDS"));
+        } else {
+            idleThresholdSeconds = Integer.parseInt(props.getProperty("activity.idle.threshold.seconds", "15"));
+        }
+
+        // Activity Update Interval
+        if (dotenv != null && dotenv.get("ACTIVITY_UPDATE_INTERVAL_SECONDS") != null) {
+            activityUpdateIntervalSeconds = Integer.parseInt(dotenv.get("ACTIVITY_UPDATE_INTERVAL_SECONDS"));
+        } else {
+            activityUpdateIntervalSeconds = Integer
+                    .parseInt(props.getProperty("activity.update.interval.seconds"));
+        }
 
         logger.info("Configuration loaded - Backend: {}, Screenshot Interval: {}min, Idle Threshold: {}s",
                 backendUrl, screenshotIntervalMinutes, idleThresholdSeconds);
