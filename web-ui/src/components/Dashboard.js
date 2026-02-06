@@ -4,10 +4,20 @@ import { useNavigate } from 'react-router-dom';
 import websocketService from '../services/websocket';
 
 function Dashboard() {
+    // Helper to get local date string YYYY-MM-DD
+    const getTodayString = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const [sessions, setSessions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterUserId, setFilterUserId] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
+    const [filterDate, setFilterDate] = useState(getTodayString());
 
     const navigate = useNavigate();
 
@@ -34,11 +44,9 @@ function Dashboard() {
 
     // Refetch when filters change
     useEffect(() => {
-        if (filterUserId || filterStatus) {
-            fetchSessions();
-        }
+        fetchSessions();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filterUserId, filterStatus]);
+    }, [filterUserId, filterStatus, filterDate]);
 
     const fetchSessions = async () => {
         setLoading(true);
@@ -48,8 +56,22 @@ function Dashboard() {
             if (filterStatus) params.status = filterStatus;
 
             const response = await getAllSessions(params);
+
+            // Filter by Date (Client-side)
+            let filteredData = response.data;
+            if (filterDate) {
+                filteredData = filteredData.filter(session => {
+                    const sessionDate = new Date(session.startTime);
+                    const year = sessionDate.getFullYear();
+                    const month = String(sessionDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(sessionDate.getDate()).padStart(2, '0');
+                    const sessionDateString = `${year}-${month}-${day}`;
+                    return sessionDateString === filterDate;
+                });
+            }
+
             // Sort sessions by startTime descending (newest first)
-            const sortedSessions = response.data.sort((a, b) =>
+            const sortedSessions = filteredData.sort((a, b) =>
                 new Date(b.startTime) - new Date(a.startTime)
             );
             setSessions(sortedSessions);
@@ -95,6 +117,16 @@ function Dashboard() {
     const shouldIncludeSession = (session) => {
         if (filterUserId && session.userId !== filterUserId) return false;
         if (filterStatus && session.status !== filterStatus) return false;
+
+        if (filterDate) {
+            const sessionDate = new Date(session.startTime);
+            const year = sessionDate.getFullYear();
+            const month = String(sessionDate.getMonth() + 1).padStart(2, '0');
+            const day = String(sessionDate.getDate()).padStart(2, '0');
+            const sessionDateString = `${year}-${month}-${day}`;
+            if (sessionDateString !== filterDate) return false;
+        }
+
         return true;
     };
 
@@ -131,6 +163,14 @@ function Dashboard() {
             <div className="dashboard-header">
                 <h2>Work Sessions</h2>
                 <div className="filter-section">
+                    <div>
+                        <label>Date: </label>
+                        <input
+                            type="date"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                        />
+                    </div>
                     <div>
                         <label>Filter by User: </label>
                         <input

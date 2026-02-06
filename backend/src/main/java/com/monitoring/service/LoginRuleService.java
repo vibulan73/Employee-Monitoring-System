@@ -23,8 +23,9 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class LoginRuleService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LoginRuleService.class);
 
     private final LoginRuleRepository loginRuleRepository;
     private final LoginRuleScheduleRepository scheduleRepository;

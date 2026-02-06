@@ -12,7 +12,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import java.time.LocalDate;
+import com.monitoring.dto.EmployeeStatsDTO;
+import com.monitoring.service.SessionService;
+
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +30,7 @@ public class EmployeeController {
 
     private final UserService userService;
     private final LoginRuleService loginRuleService;
+    private final SessionService sessionService;
     private final SimpMessagingTemplate messagingTemplate;
 
     @GetMapping
@@ -43,6 +49,17 @@ public class EmployeeController {
         }
     }
 
+    @GetMapping("/{id}/stats")
+    public ResponseEntity<EmployeeStatsDTO> getEmployeeStats(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+        EmployeeResponse employee = userService.getEmployeeById(id);
+        EmployeeStatsDTO stats = sessionService.getEmployeeStats(employee.getUserId(), from, to);
+        return ResponseEntity.ok(stats);
+    }
+
     @PostMapping
     public ResponseEntity<EmployeeResponse> createEmployee(@Valid @RequestBody EmployeeRequest request) {
         try {
@@ -53,8 +70,8 @@ public class EmployeeController {
             messagingTemplate.convertAndSend("/topic/employees", event);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(employee);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(new EmployeeResponse()); // Or proper error handling
         }
     }
 
@@ -70,7 +87,7 @@ public class EmployeeController {
             messagingTemplate.convertAndSend("/topic/employees", event);
 
             return ResponseEntity.ok(employee);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             return ResponseEntity.notFound().build();
         }
     }

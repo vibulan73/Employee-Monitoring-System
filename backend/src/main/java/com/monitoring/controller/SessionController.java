@@ -28,7 +28,10 @@ public class SessionController {
     @PostMapping("/start")
     public ResponseEntity<?> startSession(@Valid @RequestBody StartSessionRequest request) {
         try {
-            WorkSession session = sessionService.startSession(request.getUserId());
+            WorkSession session = sessionService.startSession(
+                    request.getUserId(),
+                    request.getTaskName(),
+                    request.getEstimatedDurationMinutes());
             return ResponseEntity.status(HttpStatus.CREATED).body(enrichWithUserDetails(SessionResponse.from(session)));
         } catch (TrackingNotAllowedException e) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)

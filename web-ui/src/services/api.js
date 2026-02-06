@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
-    baseUrl: API_BASE_URL,
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -55,6 +55,12 @@ export const getEmployee = (id) => {
 
 export const createEmployee = (data) => {
     return api.post(`${API_BASE_URL}/employees`, data);
+};
+
+export const getEmployeeStats = (id, from, to) => {
+    return api.get(`${API_BASE_URL}/employees/${id}/stats`, {
+        params: { from, to }
+    });
 };
 
 export const updateEmployee = (id, data) => {

@@ -1,0 +1,16 @@
+pagination for employees
+serial number for employees
+Date Filter for employees
+Status Column  (Active, Inactive)
+
+
+for employees- How many days ,working hours, active hours, idle hours
+
+serial number, FName, LName, Type of Login, Log in Date, Time, End time, Ticket for note(Task), Status
+Filter by date range
+
+/Session/
+session shown by every date
+
+/Agent
+Task, estimated time, actual time, status

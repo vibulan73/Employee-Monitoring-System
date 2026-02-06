@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginRuleResponse {
@@ -43,5 +42,78 @@ public class LoginRuleResponse {
         }
 
         return response;
+    }
+
+    // Manual Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getRuleName() {
+        return ruleName;
+    }
+
+    public void setRuleName(String ruleName) {
+        this.ruleName = ruleName;
+    }
+
+    public String getRuleType() {
+        return ruleType;
+    }
+
+    public void setRuleType(String ruleType) {
+        this.ruleType = ruleType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Boolean getIsDefault() {
+        return isDefault;
+    }
+
+    public void setIsDefault(Boolean isDefault) {
+        this.isDefault = isDefault;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public List<LoginRuleScheduleDTO> getSchedules() {
+        return schedules;
+    }
+
+    public void setSchedules(List<LoginRuleScheduleDTO> schedules) {
+        this.schedules = schedules;
+    }
+
+    public Long getAssignedEmployeeCount() {
+        return assignedEmployeeCount;
+    }
+
+    public void setAssignedEmployeeCount(Long assignedEmployeeCount) {
+        this.assignedEmployeeCount = assignedEmployeeCount;
     }
 }

@@ -14,4 +14,7 @@ public interface SessionRepository extends JpaRepository<WorkSession, UUID> {
     List<WorkSession> findByStatusOrderByStartTimeDesc(WorkSession.SessionStatus status);
 
     List<WorkSession> findByUserIdAndStatus(String userId, WorkSession.SessionStatus status);
+
+    List<WorkSession> findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(String userId, java.time.LocalDateTime start,
+            java.time.LocalDateTime end);
 }

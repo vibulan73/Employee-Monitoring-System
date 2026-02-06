@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class LoginRuleRequest {
@@ -58,5 +57,38 @@ public class LoginRuleRequest {
             default:
                 return false;
         }
+    }
+
+    // Manual Getters and Setters
+    public String getRuleName() {
+        return ruleName;
+    }
+
+    public void setRuleName(String ruleName) {
+        this.ruleName = ruleName;
+    }
+
+    public String getRuleType() {
+        return ruleType;
+    }
+
+    public void setRuleType(String ruleType) {
+        this.ruleType = ruleType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public List<LoginRuleScheduleDTO> getSchedules() {
+        return schedules;
+    }
+
+    public void setSchedules(List<LoginRuleScheduleDTO> schedules) {
+        this.schedules = schedules;
     }
 }

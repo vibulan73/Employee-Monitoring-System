@@ -13,9 +13,15 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.monitoring.dto.EmployeeStatsDTO;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +34,7 @@ public class SessionService {
     private final LoginRuleService loginRuleService;
 
     @Transactional
-    public WorkSession startSession(String userId) {
+    public WorkSession startSession(String userId, String taskName, Long estimatedDurationMinutes) {
         // Get user and check if tracking is allowed
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
@@ -58,10 +64,12 @@ public class SessionService {
         // Create new session
         WorkSession session = new WorkSession();
         session.setUserId(userId);
+        session.setTaskName(taskName);
+        session.setEstimatedDurationMinutes(estimatedDurationMinutes);
         session.setStatus(WorkSession.SessionStatus.ACTIVE);
 
         WorkSession savedSession = sessionRepository.save(session);
-        log.info("Started new session {} for user {}", savedSession.getId(), userId);
+        log.info("Started new session {} for user {} with task: {}", savedSession.getId(), userId, taskName);
 
         // Broadcast session creation via WebSocket
         publishSessionEvent(WebSocketEventDTO.EventType.SESSION_CREATED, savedSession);
@@ -105,6 +113,67 @@ public class SessionService {
 
     public List<WorkSession> getActiveSessions() {
         return sessionRepository.findByStatusOrderByStartTimeDesc(WorkSession.SessionStatus.ACTIVE);
+    }
+
+    public EmployeeStatsDTO getEmployeeStats(String userId, LocalDate from, LocalDate to) {
+        LocalDateTime startDateTime = from.atStartOfDay();
+        LocalDateTime endDateTime = to.atTime(LocalTime.MAX);
+
+        List<WorkSession> sessions = sessionRepository.findByUserIdAndStartTimeBetweenOrderByStartTimeDesc(
+                userId, startDateTime, endDateTime);
+
+        // Fetch user for login rule
+        User user = userRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        String ruleName = (user.getLoginRule() != null) ? user.getLoginRule().getRuleName() : "N/A";
+
+        // Map sessions to response
+        List<SessionResponse> sessionResponses = sessions.stream()
+                .map(SessionResponse::from)
+                .collect(Collectors.toList());
+
+        // Calculate stats
+        Set<LocalDate> workingDays = sessions.stream()
+                .map(s -> s.getStartTime().toLocalDate())
+                .collect(Collectors.toSet());
+
+        long totalWorkingDays = workingDays.size();
+
+        Duration totalDuration = Duration.ZERO;
+        Duration activeDuration = Duration.ZERO;
+        Duration idleDuration = Duration.ZERO;
+
+        for (WorkSession session : sessions) {
+            if (session.getEndTime() != null) {
+                Duration sessionDuration = Duration.between(session.getStartTime(), session.getEndTime());
+                totalDuration = totalDuration.plus(sessionDuration);
+
+                // For now, assuming all time is active since we don't have granular idle
+                // tracking in the session model yet
+                // You might need to adjust this if you track idle time separately within a
+                // session
+                activeDuration = activeDuration.plus(sessionDuration);
+            } else {
+                // For active sessions, calculate duration until now
+                Duration currentDuration = Duration.between(session.getStartTime(), LocalDateTime.now());
+                totalDuration = totalDuration.plus(currentDuration);
+                activeDuration = activeDuration.plus(currentDuration);
+            }
+        }
+
+        // Convert to hours with 2 decimal places
+        double totalHours = Math.round(totalDuration.toMinutes() / 60.0 * 100.0) / 100.0;
+        double activeHours = Math.round(activeDuration.toMinutes() / 60.0 * 100.0) / 100.0;
+        double idleHours = 0.0; // Placeholder until idle tracking logic is refined
+
+        return EmployeeStatsDTO.builder()
+                .totalWorkingDays(totalWorkingDays)
+                .totalWorkingHours(totalHours)
+                .totalActiveHours(activeHours)
+                .totalIdleHours(idleHours)
+                .loginRuleName(ruleName)
+                .recentSessions(sessionResponses)
+                .build();
     }
 
     private void publishSessionEvent(WebSocketEventDTO.EventType eventType, WorkSession session) {

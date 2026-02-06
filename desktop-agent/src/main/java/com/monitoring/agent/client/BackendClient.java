@@ -79,11 +79,13 @@ public class BackendClient {
         }
     }
 
-    public SessionResponse startSession(String userId) throws IOException, ParseException {
+    public SessionResponse startSession(String userId, String taskName, Long estimatedDurationMinutes)
+            throws IOException, ParseException {
         String url = baseUrl + "/api/sessions/start";
         HttpPost request = new HttpPost(url);
 
-        String json = String.format("{\"userId\":\"%s\"}", userId);
+        String json = String.format("{\"userId\":\"%s\",\"taskName\":\"%s\",\"estimatedDurationMinutes\":%d}",
+                userId, taskName, estimatedDurationMinutes);
         request.setEntity(new StringEntity(json, ContentType.APPLICATION_JSON));
 
         try (CloseableHttpResponse response = httpClient.execute(request)) {

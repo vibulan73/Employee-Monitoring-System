@@ -3,18 +3,18 @@ package com.monitoring.agent.ui;
 import com.monitoring.agent.MonitoringAgent;
 import com.monitoring.agent.model.AuthResponse;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 public class AgentUI {
     private final MonitoringAgent agent;
@@ -24,17 +24,25 @@ public class AgentUI {
     private Label statusLabel;
     private Label activityLabel;
     private Label sessionIdLabel;
+
+    // Global Timers
     private Label sessionTimerLabel;
     private Label activeTimerLabel;
     private Label idleTimerLabel;
     private Label pausedTimerLabel;
-    private Label currentBreakReasonLabel;
-    private ComboBox<String> breakReasonComboBox;
+
+    // Global Controls
     private Button startButton;
     private Button stopButton;
     private Button pauseButton;
     private Button logoutButton;
+    private Button newTaskButton; // Added field
+    private ComboBox<String> breakReasonComboBox;
     private String selectedBreakReason;
+
+    // Task Table
+    private TableView<TaskSessionModel> taskTable;
+    private ObservableList<TaskSessionModel> taskList;
 
     public AgentUI(MonitoringAgent agent, AuthResponse user) {
         this.agent = agent;
@@ -44,12 +52,11 @@ public class AgentUI {
     public void start(Stage primaryStage) {
         this.stage = primaryStage;
 
-        // Create UI components
+        // --- Header Section ---
         Label titleLabel = new Label("Employee Activity Monitor");
         titleLabel.setFont(Font.font("System", FontWeight.BOLD, 24));
         titleLabel.setTextFill(Color.web("#2c3e50"));
 
-        // User info display
         Label userInfoLabel = new Label("Welcome, " + user.getFirstName() + " " + user.getLastName());
         userInfoLabel.setFont(Font.font("System", FontWeight.SEMI_BOLD, 16));
         userInfoLabel.setTextFill(Color.web("#3498db"));
@@ -58,7 +65,10 @@ public class AgentUI {
         jobRoleLabel.setFont(Font.font("System", 13));
         jobRoleLabel.setTextFill(Color.web("#7f8c8d"));
 
-        // Status labels
+        Label separator1 = new Label("────────────────────────");
+        separator1.setTextFill(Color.web("#bdc3c7"));
+
+        // --- Status & Activity ---
         statusLabel = new Label("Status: Not Started");
         statusLabel.setFont(Font.font("System", FontWeight.SEMI_BOLD, 16));
         statusLabel.setTextFill(Color.web("#7f8c8d"));
@@ -71,216 +81,308 @@ public class AgentUI {
         sessionIdLabel.setFont(Font.font("System", 12));
         sessionIdLabel.setTextFill(Color.web("#95a5a6"));
 
-        // Timer labels
+        VBox headerBox = new VBox(10, titleLabel, userInfoLabel, jobRoleLabel, separator1, statusLabel, activityLabel,
+                sessionIdLabel);
+        headerBox.setAlignment(Pos.CENTER);
+
+        // --- Task Table Section ---
+        taskTable = new TableView<>();
+        taskList = FXCollections.observableArrayList();
+        taskTable.setItems(taskList);
+        taskTable.setEditable(true);
+        taskTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        taskTable.setPlaceholder(new Label("Click '+ New Task' to add a task"));
+        taskTable.setDisable(true); // Default disabled
+
+        // Column 1: Task Name (Editable)
+        TableColumn<TaskSessionModel, String> nameCol = new TableColumn<>("Task Name");
+        nameCol.setCellValueFactory(cellData -> cellData.getValue().taskNameProperty());
+        nameCol.setCellFactory(col -> new EditingCell());
+        nameCol.setOnEditCommit(e -> {
+            if (e.getRowValue().isEditable()) {
+                e.getRowValue().setTaskName(e.getNewValue());
+            } else {
+                taskTable.refresh();
+            }
+        });
+        nameCol.setEditable(true);
+
+        // Column 2: Estimated Time (Editable)
+        TableColumn<TaskSessionModel, String> timeCol = new TableColumn<>("Est. Time (min)");
+        timeCol.setCellValueFactory(cellData -> cellData.getValue().estimatedTimeProperty());
+        timeCol.setCellFactory(col -> new EditingCell());
+        timeCol.setOnEditCommit(e -> {
+            if (e.getRowValue().isEditable()) {
+                // simple validation: force numeric
+                if (e.getNewValue().matches("\\d*")) {
+                    e.getRowValue().setEstimatedTime(e.getNewValue());
+                } else {
+                    taskTable.refresh();
+                }
+            }
+        });
+        timeCol.setEditable(true);
+
+        // Column 3: Timer
+        TableColumn<TaskSessionModel, String> timerCol = new TableColumn<>("Timer");
+        timerCol.setCellValueFactory(cellData -> cellData.getValue().durationProperty());
+        timerCol.setEditable(false);
+
+        // Column 4: Status
+        TableColumn<TaskSessionModel, TaskSessionModel.TaskStatus> statusCol = new TableColumn<>("Status");
+        statusCol.setCellValueFactory(cellData -> cellData.getValue().statusProperty());
+        statusCol.setEditable(false);
+
+        // Column 5: Actions (Start/Stop/Pause/Delete)
+        TableColumn<TaskSessionModel, Void> actionCol = new TableColumn<>("Action");
+        actionCol.setCellFactory(new Callback<>() {
+            @Override
+            public TableCell<TaskSessionModel, Void> call(final TableColumn<TaskSessionModel, Void> param) {
+                return new TableCell<>() {
+                    private final Button mainBtn = new Button();
+                    private final Button stopBtn = new Button("⏹");
+                    private final Button deleteBtn = new Button("−"); // Minus sign for delete
+                    private final HBox pane = new HBox(5, mainBtn, stopBtn, deleteBtn);
+
+                    {
+                        pane.setAlignment(Pos.CENTER);
+                        stopBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-size: 10px;");
+                        stopBtn.setOnAction(e -> {
+                            TaskSessionModel task = getTableView().getItems().get(getIndex());
+                            handleTaskStop(task);
+                        });
+
+                        deleteBtn.setStyle(
+                                "-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 11px;");
+                        deleteBtn.setOnAction(e -> {
+                            TaskSessionModel task = getTableView().getItems().get(getIndex());
+                            taskList.remove(task);
+                        });
+                    }
+
+                    @Override
+                    public void updateItem(Void item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty) {
+                            setGraphic(null);
+                        } else {
+                            TaskSessionModel task = getTableView().getItems().get(getIndex());
+                            TaskSessionModel.TaskStatus status = task.getStatus();
+
+                            if (status == TaskSessionModel.TaskStatus.PENDING) {
+                                mainBtn.setText("▶");
+                                mainBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
+                                mainBtn.setOnAction(e -> handleTaskStart(task));
+                                stopBtn.setVisible(false);
+                                stopBtn.setManaged(false);
+
+                                deleteBtn.setVisible(true); // Allow delete for pending
+                                deleteBtn.setManaged(true);
+                            } else if (status == TaskSessionModel.TaskStatus.ACTIVE) {
+                                mainBtn.setText("⏸");
+                                mainBtn.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white;");
+                                mainBtn.setOnAction(e -> handleTaskPause(task));
+                                stopBtn.setVisible(true);
+                                stopBtn.setManaged(true);
+
+                                deleteBtn.setVisible(false);
+                                deleteBtn.setManaged(false);
+                            } else if (status == TaskSessionModel.TaskStatus.PAUSED) {
+                                mainBtn.setText("▶");
+                                mainBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
+                                mainBtn.setOnAction(e -> handleTaskStart(task));
+                                stopBtn.setVisible(true);
+                                stopBtn.setManaged(true);
+
+                                deleteBtn.setVisible(false);
+                                deleteBtn.setManaged(false);
+                            } else {
+                                // Completed/Stopped
+                                mainBtn.setText("✓");
+                                mainBtn.setDisable(true);
+                                mainBtn.setStyle(
+                                        "-fx-background-color: transparent; -fx-text-fill: #2ecc71; -fx-font-weight: bold;");
+                                stopBtn.setVisible(false);
+                                stopBtn.setManaged(false);
+                                deleteBtn.setVisible(false);
+                                deleteBtn.setManaged(false);
+                            }
+                            setGraphic(pane);
+                        }
+                    }
+                };
+            }
+        });
+
+        taskTable.getColumns().addAll(nameCol, timeCol, timerCol, statusCol, actionCol);
+
+        // Fix table visual height - dynamic binding
+        taskTable.setFixedCellSize(35);
+        // Bind height: (rows * cell_size) + header_size (approx 30) + padding
+        taskTable.prefHeightProperty().bind(taskTable.fixedCellSizeProperty()
+                .multiply(javafx.beans.binding.Bindings.size(taskTable.getItems())).add(30));
+        taskTable.setMinHeight(30);
+
+        newTaskButton = new Button("+ New Task");
+        newTaskButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
+        newTaskButton.setDisable(true); // Default disabled
+        newTaskButton.setOnAction(e -> handleNewTask());
+
+        VBox tableBox = new VBox(5, taskTable, newTaskButton);
+        tableBox.setPadding(new Insets(10, 0, 10, 0));
+        // VBox.setVgrow(taskTable, Priority.ALWAYS); // Removed to allow dynamic sizing
+
+        // --- Global Timers & Controls ---
         sessionTimerLabel = new Label("Session Time: 00:00:00");
-        sessionTimerLabel.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
+        sessionTimerLabel.setFont(Font.font("System", FontWeight.BOLD, 14));
         sessionTimerLabel.setTextFill(Color.web("#3498db"));
 
         activeTimerLabel = new Label("Active: 00:00:00");
-        activeTimerLabel.setFont(Font.font("System", 14));
         activeTimerLabel.setTextFill(Color.web("#27ae60"));
 
         idleTimerLabel = new Label("Idle: 00:00:00");
-        idleTimerLabel.setFont(Font.font("System", 14));
         idleTimerLabel.setTextFill(Color.web("#e67e22"));
 
         pausedTimerLabel = new Label("Paused: 00:00:00");
-        pausedTimerLabel.setFont(Font.font("System", 14));
         pausedTimerLabel.setTextFill(Color.web("#9b59b6"));
 
-        // Current break reason label
-        currentBreakReasonLabel = new Label("");
-        currentBreakReasonLabel.setFont(Font.font("System", FontWeight.SEMI_BOLD, 13));
-        currentBreakReasonLabel.setTextFill(Color.web("#9b59b6"));
-        currentBreakReasonLabel.setVisible(false);
+        HBox timersBox = new HBox(15, sessionTimerLabel, activeTimerLabel, idleTimerLabel, pausedTimerLabel);
+        timersBox.setAlignment(Pos.CENTER);
 
-        // Break reason dropdown
+        Label separator2 = new Label("────────────────────────");
+        separator2.setTextFill(Color.web("#bdc3c7"));
+
+        // Global Break/Pause
         breakReasonComboBox = new ComboBox<>();
-        breakReasonComboBox.getItems().addAll(
-                "Tea Break",
-                "Lunch Break",
-                "Personal Break",
-                "Meeting",
-                "Prayer Break",
-                "Other");
-        breakReasonComboBox.setPromptText("Select break reason...");
-        breakReasonComboBox.setPrefWidth(200);
-        breakReasonComboBox.setStyle(
-                "-fx-font-size: 13px; " +
-                        "-fx-background-radius: 5;");
-
-        // Add listener to enable pause button when reason is selected
+        breakReasonComboBox.getItems().addAll("Tea Break", "Lunch Break", "Personal Break", "Meeting", "Other");
+        breakReasonComboBox.setPromptText("Break Reason");
         breakReasonComboBox.setOnAction(e -> {
-            String selected = breakReasonComboBox.getValue();
-            // Enable pause button if monitoring is started (start button is disabled) and
-            // reason is selected
-            if (selected != null && !selected.isEmpty() && startButton.isDisabled()) {
+            if (breakReasonComboBox.getValue() != null && !startButton.isDisabled()) {
                 pauseButton.setDisable(false);
-                pauseButton.setStyle(
-                        "-fx-background-color: #f39c12; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
             }
         });
 
-        // Separator line
-        Label separator = new Label("────────────────────────");
-        separator.setFont(Font.font("System", 12));
-        separator.setTextFill(Color.web("#bdc3c7"));
-
-        // Pause Button
-        pauseButton = new Button("⏸️ Pause");
-        pauseButton.setFont(Font.font("System", FontWeight.BOLD, 14));
-        pauseButton.setPrefWidth(200);
-        pauseButton.setPrefHeight(45);
-        pauseButton.setStyle(
-                "-fx-background-color: #f39c12; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-cursor: hand; " +
-                        "-fx-opacity: 0.5;");
+        pauseButton = new Button("⏸ Pause Work");
+        pauseButton.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
         pauseButton.setDisable(true);
-        pauseButton.setOnAction(e -> handlePause());
+        pauseButton.setOnAction(e -> handlePause()); // Global Pause
 
-        // Buttons
         startButton = new Button("Start Work");
-        startButton.setFont(Font.font("System", FontWeight.BOLD, 14));
-        startButton.setPrefWidth(200);
-        startButton.setPrefHeight(45);
         startButton.setStyle(
-                "-fx-background-color: #27ae60; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-cursor: hand;");
-        startButton.setOnAction(e -> handleStart());
+                "-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px;");
+        startButton.setPrefWidth(150);
+        startButton.setOnAction(e -> handleStart()); // Global Start
 
         stopButton = new Button("Stop Work");
-        stopButton.setFont(Font.font("System", FontWeight.BOLD, 14));
-        stopButton.setPrefWidth(200);
-        stopButton.setPrefHeight(45);
         stopButton.setStyle(
-                "-fx-background-color: #e74c3c; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-cursor: hand; " +
-                        "-fx-opacity: 0.5;");
+                "-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px;");
+        stopButton.setPrefWidth(150);
         stopButton.setDisable(true);
-        stopButton.setOnAction(e -> handleStop());
+        stopButton.setOnAction(e -> handleStop()); // Global Stop
 
-        logoutButton = new Button("⬅ Log Out");
-        logoutButton.setFont(Font.font("System", FontWeight.BOLD, 14));
-        logoutButton.setPrefWidth(200);
-        logoutButton.setPrefHeight(45);
-        logoutButton.setStyle(
-                "-fx-background-color: #95a5a6; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-background-radius: 8; " +
-                        "-fx-cursor: hand;");
+        logoutButton = new Button("Log Out");
         logoutButton.setOnAction(e -> handleLogout());
 
-        logoutButton.setOnMouseEntered(e -> {
-            logoutButton.setStyle(
-                    "-fx-background-color: #7f8c8d; " +
-                            "-fx-text-fill: white; " +
-                            "-fx-background-radius: 8; " +
-                            "-fx-cursor: hand;");
-        });
-        logoutButton.setOnMouseExited(e -> {
-            logoutButton.setStyle(
-                    "-fx-background-color: #95a5a6; " +
-                            "-fx-text-fill: white; " +
-                            "-fx-background-radius: 8; " +
-                            "-fx-cursor: hand;");
-        });
+        HBox controlsBox = new HBox(10, breakReasonComboBox, pauseButton);
+        controlsBox.setAlignment(Pos.CENTER);
 
-        // Add hover effects
-        startButton.setOnMouseEntered(e -> {
-            if (!startButton.isDisabled()) {
-                startButton.setStyle(
-                        "-fx-background-color: #229954; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-            }
-        });
-        startButton.setOnMouseExited(e -> {
-            if (!startButton.isDisabled()) {
-                startButton.setStyle(
-                        "-fx-background-color: #27ae60; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-            }
-        });
+        HBox mainControlsBox = new HBox(15, startButton, stopButton);
+        mainControlsBox.setAlignment(Pos.CENTER);
 
-        stopButton.setOnMouseEntered(e -> {
-            if (!stopButton.isDisabled()) {
-                stopButton.setStyle(
-                        "-fx-background-color: #c0392b; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-            }
-        });
-        stopButton.setOnMouseExited(e -> {
-            if (!stopButton.isDisabled()) {
-                stopButton.setStyle(
-                        "-fx-background-color: #e74c3c; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-            }
-        });
+        VBox bottomBox = new VBox(10, separator2, timersBox, controlsBox, mainControlsBox, logoutButton);
+        bottomBox.setAlignment(Pos.CENTER);
+        bottomBox.setPadding(new Insets(10));
 
-        // Layout
-        VBox layout = new VBox(20);
-        layout.setPadding(new Insets(40));
-        layout.setAlignment(Pos.CENTER);
-        layout.setStyle("-fx-background-color: #ecf0f1;");
-        layout.getChildren().addAll(
-                titleLabel,
-                userInfoLabel,
-                jobRoleLabel,
-                statusLabel,
-                activityLabel,
-                sessionIdLabel,
-                separator,
-                sessionTimerLabel,
-                activeTimerLabel,
-                idleTimerLabel,
-                pausedTimerLabel,
-                currentBreakReasonLabel,
-                startButton, // Will be hidden when monitoring starts
-                breakReasonComboBox, // Will be shown when monitoring starts
-                pauseButton, // Will be shown when monitoring starts
-                logoutButton,
-                stopButton);
+        // Main Layout
+        BorderPane mainLayout = new BorderPane();
+        mainLayout.setTop(headerBox);
+        mainLayout.setCenter(tableBox); // Table in center
+        mainLayout.setBottom(bottomBox);
+        mainLayout.setPadding(new Insets(20));
+        mainLayout.setStyle("-fx-background-color: #ecf0f1;");
 
-        // Initially hide pause-related controls
-        breakReasonComboBox.setVisible(false);
-        breakReasonComboBox.setManaged(false);
-        pauseButton.setVisible(false);
-        pauseButton.setManaged(false);
-
-        Scene scene = new Scene(layout, 500, 720);
+        // Init Scene
+        Scene scene = new Scene(mainLayout, 600, 800);
         stage.setTitle("Employee Activity Monitor");
         stage.setScene(scene);
-        stage.setResizable(false);
-        stage.setOnCloseRequest(e -> {
-            agent.shutdown();
-            Platform.exit();
-        });
-
         stage.show();
     }
 
+    // --- Handlers ---
+
     private void handleStart() {
-        agent.startMonitoring();
+        // Global Start
+        agent.startMonitoring(); // Calls internal monitoring start
+
+        taskTable.setDisable(false); // Enable table
+        if (newTaskButton != null)
+            newTaskButton.setDisable(false);
+
+        // Buttons
+        startButton.setDisable(true);
+        stopButton.setDisable(false);
+        breakReasonComboBox.setDisable(false);
+    }
+
+    private void handleNewTask() {
+        taskList.add(new TaskSessionModel("", ""));
+    }
+
+    private void handleTaskStart(TaskSessionModel task) {
+        if (task.getTaskName().isEmpty() || task.getEstimatedTime().isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Please enter Task Name and Estimated Time.");
+            alert.show();
+            return;
+        }
+
+        // Stop/Pause any other active tasks?
+        for (TaskSessionModel t : taskList) {
+            if (t != task && t.getStatus() == TaskSessionModel.TaskStatus.ACTIVE) {
+                // Auto-pause others
+                handleTaskPause(t);
+            }
+        }
+
+        task.setStatus(TaskSessionModel.TaskStatus.ACTIVE);
+        agent.startTask(task); // Tell Agent to track this task
+        taskTable.refresh();
+    }
+
+    private void handleTaskPause(TaskSessionModel task) {
+        task.setStatus(TaskSessionModel.TaskStatus.PAUSED);
+        // If this was the active task in Agent, calling startTask(null) or similar?
+        // Or just let Agent know.
+        // Effectively pausing task timer
+        taskTable.refresh();
+    }
+
+    private void handleTaskStop(TaskSessionModel task) {
+        task.setStatus(TaskSessionModel.TaskStatus.STOPPED);
+        agent.stopTask(task);
+        taskTable.refresh();
     }
 
     private void handleStop() {
+        // Global Stop
         agent.stopMonitoring();
+
+        taskTable.setDisable(true);
+        if (newTaskButton != null)
+            newTaskButton.setDisable(true);
+
+        startButton.setDisable(false);
+        stopButton.setDisable(true);
+        pauseButton.setDisable(true);
+        breakReasonComboBox.setDisable(true);
+
+        // Mark all active tasks as stopped?
+        for (TaskSessionModel t : taskList) {
+            if (t.getStatus() == TaskSessionModel.TaskStatus.ACTIVE
+                    || t.getStatus() == TaskSessionModel.TaskStatus.PAUSED) {
+                t.setStatus(TaskSessionModel.TaskStatus.STOPPED);
+            }
+        }
+        taskTable.refresh();
     }
 
     private void handleLogout() {
@@ -288,10 +390,11 @@ public class AgentUI {
     }
 
     private void handlePause() {
-        // Store the selected break reason before pausing
         selectedBreakReason = breakReasonComboBox.getValue();
         agent.togglePause();
     }
+
+    // --- Update Methods from Agent ---
 
     public void updateStatus(String status, Color color) {
         Platform.runLater(() -> {
@@ -318,90 +421,10 @@ public class AgentUI {
     }
 
     public void setMonitoringStarted(boolean started) {
+        // Handled in handleStart/Stop mostly, but for external triggers:
         Platform.runLater(() -> {
-            startButton.setDisable(started);
-            stopButton.setDisable(!started);
-
-            // Pause button is only enabled when monitoring is started AND break reason is
-            // selected
-            if (started) {
-                // Hide Start button, show Pause controls
-                startButton.setVisible(false);
-                startButton.setManaged(false);
-
-                // Show pause-related controls
-                breakReasonComboBox.setVisible(true);
-                breakReasonComboBox.setManaged(true);
-                pauseButton.setVisible(true);
-                pauseButton.setManaged(true);
-
-                // Enable dropdown when monitoring starts
-                breakReasonComboBox.setDisable(false);
-                // Pause button stays disabled until reason is selected
-                pauseButton.setDisable(true);
-            } else {
-                // Show Start button, hide Pause controls
-                startButton.setVisible(true);
-                startButton.setManaged(true);
-
-                // Hide pause-related controls
-                breakReasonComboBox.setVisible(false);
-                breakReasonComboBox.setManaged(false);
-                pauseButton.setVisible(false);
-                pauseButton.setManaged(false);
-
-                // Disable both when monitoring stops
-                pauseButton.setDisable(true);
-                breakReasonComboBox.setDisable(true);
-                // Disable both when monitoring stops
-                pauseButton.setDisable(true);
-                breakReasonComboBox.setDisable(true);
-                breakReasonComboBox.setValue(null);
-            }
-
-            // Handle Logout Button Visibility
-            if (started) {
-                logoutButton.setVisible(false);
-                logoutButton.setManaged(false);
-            } else {
-                logoutButton.setVisible(true);
-                logoutButton.setManaged(true);
-            }
-
-            if (started) {
-                startButton.setStyle(
-                        "-fx-background-color: #95a5a6; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-opacity: 0.5;");
-                stopButton.setStyle(
-                        "-fx-background-color: #e74c3c; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-                pauseButton.setStyle(
-                        "-fx-background-color: #f39c12; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-            } else {
-                startButton.setStyle(
-                        "-fx-background-color: #27ae60; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-                stopButton.setStyle(
-                        "-fx-background-color: #e74c3c; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand; " +
-                                "-fx-opacity: 0.5;");
-                pauseButton.setStyle(
-                        "-fx-background-color: #f39c12; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand; " +
-                                "-fx-opacity: 0.5;");
+            if (!started && startButton.isDisabled()) {
+                handleStop(); // Sync UI if backend stopped it
             }
         });
     }
@@ -409,43 +432,16 @@ public class AgentUI {
     public void setPaused(boolean paused) {
         Platform.runLater(() -> {
             if (paused) {
-                // Show break reason during pause
-                if (selectedBreakReason != null && !selectedBreakReason.isEmpty()) {
-                    currentBreakReasonLabel.setText("Break Reason: " + selectedBreakReason);
-                    currentBreakReasonLabel.setVisible(true);
-                }
-                pauseButton.setText("▶️ Resume");
-                pauseButton.setStyle(
-                        "-fx-background-color: #27ae60; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand;");
-                statusLabel.setText("Status: ⏸️ PAUSED");
+                pauseButton.setText("▶ Resume Work");
+                pauseButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold;");
+                statusLabel.setText("Status: ⏸ PAUSED");
                 statusLabel.setTextFill(Color.web("#f39c12"));
-                activityLabel.setText("Activity: --");
-                activityLabel.setTextFill(Color.web("#7f8c8d"));
-                // Disable dropdown during pause
-                breakReasonComboBox.setDisable(true);
+                // When global pause is active, task table is visually paused (timers wont tick)
             } else {
-                // Clear break reason and hide label
-                currentBreakReasonLabel.setVisible(false);
-                currentBreakReasonLabel.setText("");
-                selectedBreakReason = null;
-
-                pauseButton.setText("⏸️ Pause");
-                pauseButton.setStyle(
-                        "-fx-background-color: #f39c12; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-background-radius: 8; " +
-                                "-fx-cursor: hand; " +
-                                "-fx-opacity: 0.5;");
-                pauseButton.setDisable(true); // Disable until new reason is selected
+                pauseButton.setText("⏸ Pause Work");
+                pauseButton.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
                 statusLabel.setText("Status: Monitoring Active");
                 statusLabel.setTextFill(Color.web("#27ae60"));
-
-                // Clear and re-enable dropdown
-                breakReasonComboBox.setValue(null);
-                breakReasonComboBox.setDisable(false);
             }
         });
     }
@@ -472,6 +468,72 @@ public class AgentUI {
             activeTimerLabel.setText("Active: 00:00:00");
             idleTimerLabel.setText("Idle: 00:00:00");
             pausedTimerLabel.setText("Paused: 00:00:00");
+
+            // Clear table? OR Keep history?
+            // Usually reset implies clear for new session.
+            taskList.clear();
         });
+    }
+
+    class EditingCell extends TableCell<TaskSessionModel, String> {
+        private TextField textField;
+
+        public EditingCell() {
+        }
+
+        @Override
+        public void startEdit() {
+            if (!isEmpty()) {
+                super.startEdit();
+                createTextField();
+                setText(null);
+                setGraphic(textField);
+                textField.selectAll();
+            }
+        }
+
+        @Override
+        public void cancelEdit() {
+            super.cancelEdit();
+            setText((String) getItem());
+            setGraphic(null);
+        }
+
+        @Override
+        public void updateItem(String item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty) {
+                setText(null);
+                setGraphic(null);
+            } else {
+                if (isEditing()) {
+                    if (textField != null) {
+                        textField.setText(getString());
+                    }
+                    setText(null);
+                    setGraphic(textField);
+                } else {
+                    setText(getString());
+                    setGraphic(null);
+                }
+            }
+        }
+
+        private void createTextField() {
+            textField = new TextField(getString());
+            textField.setMinWidth(this.getWidth() - this.getGraphicTextGap() * 2);
+            textField.focusedProperty().addListener((arg0, arg1, arg2) -> {
+                if (!arg2) {
+                    commitEdit(textField.getText());
+                }
+            });
+
+            // Also commit on Enter
+            textField.setOnAction(e -> commitEdit(textField.getText()));
+        }
+
+        private String getString() {
+            return getItem() == null ? "" : getItem().toString();
+        }
     }
 }

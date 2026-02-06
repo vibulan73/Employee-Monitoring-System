@@ -8,7 +8,8 @@ class WebSocketService {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 10;
         this.reconnectDelay = 1000; // Start with 1 second
-        this.subscriptions = new Map();
+        this.subscriptions = new Map(); // Stores callbacks: destination -> callback
+        this.stompSubscriptions = new Map(); // Stores actual STOMP subscription objects: destination -> subscription
     }
 
     connect(onConnect) {
@@ -23,7 +24,7 @@ class WebSocketService {
         this.client = new Client({
             webSocketFactory: () => new SockJS(`${serverUrl}/ws`),
             debug: (str) => {
-                console.log('STOMP Debug:', str);
+                // console.log('STOMP Debug:', str);
             },
             reconnectDelay: this.reconnectDelay,
             heartbeatIncoming: 4000,
@@ -42,6 +43,7 @@ class WebSocketService {
             onDisconnect: () => {
                 console.log('WebSocket disconnected');
                 this.connected = false;
+                this.stompSubscriptions.clear();
             },
             onStompError: (frame) => {
                 console.error('STOMP error:', frame);
@@ -57,6 +59,9 @@ class WebSocketService {
     }
 
     handleReconnect(onConnect) {
+        // Clear stomp subscriptions on disconnect/error as they are invalid now
+        this.stompSubscriptions.clear();
+
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000); // Max 30 seconds
@@ -79,7 +84,20 @@ class WebSocketService {
         // Store subscription info for resubscription after reconnect
         this.subscriptions.set(destination, callback);
 
+        // If we already have an active subscription for this destination, unsubscribe first
+        // This prevents duplicate subscriptions for the same topic
+        if (this.stompSubscriptions.has(destination)) {
+            console.log(`Unsubscribing from existing subscription to ${destination}`);
+            try {
+                this.stompSubscriptions.get(destination).unsubscribe();
+            } catch (e) {
+                console.warn('Error unsubscribing:', e);
+            }
+            this.stompSubscriptions.delete(destination);
+        }
+
         if (this.connected) {
+            console.log(`Subscribing to ${destination}`);
             const subscription = this.client.subscribe(destination, (message) => {
                 try {
                     const event = JSON.parse(message.body);
@@ -89,7 +107,7 @@ class WebSocketService {
                 }
             });
 
-            console.log(`Subscribed to ${destination}`);
+            this.stompSubscriptions.set(destination, subscription);
             return subscription;
         } else {
             console.warn(`Not connected yet, subscription to ${destination} will be made upon connection`);
@@ -99,25 +117,43 @@ class WebSocketService {
 
     resubscribeAll() {
         console.log('Resubscribing to all topics');
+        this.stompSubscriptions.clear(); // Clear old subscription objects
+
         this.subscriptions.forEach((callback, destination) => {
-            this.client.subscribe(destination, (message) => {
-                try {
-                    const event = JSON.parse(message.body);
-                    callback(event);
-                } catch (error) {
-                    console.error('Error parsing WebSocket message:', error);
-                }
-            });
+            if (this.client && this.client.connected) {
+                const subscription = this.client.subscribe(destination, (message) => {
+                    try {
+                        const event = JSON.parse(message.body);
+                        callback(event);
+                    } catch (error) {
+                        console.error('Error parsing WebSocket message:', error);
+                    }
+                });
+                this.stompSubscriptions.set(destination, subscription);
+            }
         });
     }
 
     unsubscribe(destination) {
+        // Remove from persistent subscriptions map
         this.subscriptions.delete(destination);
+
+        // Unsubscribe from actual STOMP client
+        if (this.stompSubscriptions.has(destination)) {
+            console.log(`Unsubscribing from ${destination}`);
+            try {
+                this.stompSubscriptions.get(destination).unsubscribe();
+                this.stompSubscriptions.delete(destination);
+            } catch (e) {
+                console.warn(`Error unsubscribing from ${destination}:`, e);
+            }
+        }
     }
 
     disconnect() {
         if (this.client) {
             this.subscriptions.clear();
+            this.stompSubscriptions.clear();
             this.client.deactivate();
             this.connected = false;
             console.log('WebSocket disconnected');

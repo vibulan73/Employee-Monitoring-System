@@ -37,6 +37,12 @@ public class WorkSession {
     @Column
     private LocalDateTime lastIdleCheckTime;
 
+    @Column
+    private String taskName;
+
+    @Column
+    private Long estimatedDurationMinutes;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SessionStatus status = SessionStatus.ACTIVE;

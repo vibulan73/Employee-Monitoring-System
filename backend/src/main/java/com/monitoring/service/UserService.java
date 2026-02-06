@@ -83,6 +83,7 @@ public class UserService {
         user.setLastName(request.getLastName());
         user.setJobRole(request.getJobRole());
         user.setPhoneNumber(request.getPhoneNumber());
+        user.setStatus(request.getStatus() != null ? request.getStatus() : "ACTIVE");
 
         // Assign login rule (default rule if not specified)
         if (request.getLoginRuleId() != null) {
@@ -120,6 +121,9 @@ public class UserService {
         user.setLastName(request.getLastName());
         user.setJobRole(request.getJobRole());
         user.setPhoneNumber(request.getPhoneNumber());
+        if (request.getStatus() != null) {
+            user.setStatus(request.getStatus());
+        }
 
         // Update login rule if specified
         if (request.getLoginRuleId() != null) {

@@ -7,4 +7,9 @@ import lombok.Data;
 public class StartSessionRequest {
     @NotBlank(message = "User ID is required")
     private String userId;
+
+    @NotBlank(message = "Task name is required")
+    private String taskName;
+
+    private Long estimatedDurationMinutes;
 }

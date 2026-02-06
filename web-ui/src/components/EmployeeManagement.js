@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAllEmployees, createEmployee, updateEmployee, deleteEmployee } from '../services/api';
 import { getAllLoginRules } from '../services/loginRuleService';
 import websocketService from '../services/websocket';
+import EmployeeDetailsModal from './EmployeeDetailsModal';
 
 function EmployeeManagement() {
     const [employees, setEmployees] = useState([]);
@@ -21,10 +22,19 @@ function EmployeeManagement() {
         lastName: '',
         jobRole: '',
         phoneNumber: '',
-        loginRuleId: ''
+        loginRuleId: '',
+        status: 'ACTIVE'
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+
+    // New state for details modal
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [detailsEmployee, setDetailsEmployee] = useState(null);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
 
     useEffect(() => {
         fetchEmployees();
@@ -74,6 +84,11 @@ function EmployeeManagement() {
 
         setEmployees(prevEmployees => {
             if (eventType === 'EMPLOYEE_CREATED') {
+                // Prevent duplicate addition
+                if (prevEmployees.some(emp => emp.id === payload.id)) {
+                    console.log('Ignoring duplicate EMPLOYEE_CREATED event', payload.id);
+                    return prevEmployees;
+                }
                 return [...prevEmployees, payload];
             } else if (eventType === 'EMPLOYEE_UPDATED') {
                 return prevEmployees.map(emp =>
@@ -97,7 +112,8 @@ function EmployeeManagement() {
             lastName: '',
             jobRole: '',
             phoneNumber: '',
-            loginRuleId: defaultRule?.id || ''
+            loginRuleId: defaultRule?.id || '',
+            status: 'ACTIVE'
         });
         setError('');
         setSuccess('');
@@ -114,7 +130,8 @@ function EmployeeManagement() {
             lastName: employee.lastName,
             jobRole: employee.jobRole,
             phoneNumber: employee.phoneNumber,
-            loginRuleId: employee.loginRuleId || ''
+            loginRuleId: employee.loginRuleId || '',
+            status: employee.status || 'ACTIVE'
         });
         setError('');
         setSuccess('');
@@ -146,11 +163,20 @@ function EmployeeManagement() {
         setSuccess('');
 
         try {
+            const dataToSend = {
+                ...formData,
+                loginRuleId: formData.loginRuleId === '' ? null : formData.loginRuleId
+            };
+
             if (modalMode === 'add') {
-                await createEmployee(formData);
+                await createEmployee(dataToSend);
                 setSuccess('Employee added successfully');
             } else {
-                await updateEmployee(selectedEmployee.id, formData);
+                const dataToSend = {
+                    ...formData,
+                    loginRuleId: formData.loginRuleId === '' ? null : formData.loginRuleId
+                };
+                await updateEmployee(selectedEmployee.id, dataToSend);
                 setSuccess('Employee updated successfully');
             }
             setShowModal(false);
@@ -168,6 +194,16 @@ function EmployeeManagement() {
         });
     };
 
+    const handleRowClick = (employee) => {
+        setDetailsEmployee(employee);
+        setShowDetailsModal(true);
+    };
+
+    // Reset to first page when search/filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filterRole]);
+
     // Filter employees based on search and role filter
     const filteredEmployees = employees.filter(emp => {
         const matchesSearch =
@@ -176,7 +212,15 @@ function EmployeeManagement() {
             emp.userId.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesRole = !filterRole || emp.jobRole === filterRole;
         return matchesSearch && matchesRole;
-    });
+    }).sort((a, b) => a.id - b.id);
+
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = filteredEmployees.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
     // Get unique job roles for filter
     const jobRoles = [...new Set(employees.map(emp => emp.jobRole))];
@@ -234,18 +278,26 @@ function EmployeeManagement() {
                     <table className="employee-table">
                         <thead>
                             <tr>
+                                <th>S.No</th>
                                 <th>User ID</th>
                                 <th>Name</th>
                                 <th>Job Role</th>
                                 <th>Phone</th>
+                                <th>Status</th>
                                 <th>Login Rule</th>
                                 <th>Created</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredEmployees.map(employee => (
-                                <tr key={employee.id}>
+                            {currentItems.map((employee, index) => (
+                                <tr
+                                    key={employee.id}
+                                    onClick={() => handleRowClick(employee)}
+                                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                                    className="employee-row"
+                                >
+                                    <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                                     <td className="user-id">{employee.userId}</td>
                                     <td className="employee-name">
                                         {employee.firstName} {employee.lastName}
@@ -254,6 +306,20 @@ function EmployeeManagement() {
                                         <span className="role-badge">{employee.jobRole}</span>
                                     </td>
                                     <td>{employee.phoneNumber}</td>
+                                    <td>
+                                        <span
+                                            style={{
+                                                backgroundColor: employee.status === 'ACTIVE' ? '#d4edda' : '#f8d7da',
+                                                color: employee.status === 'ACTIVE' ? '#155724' : '#721c24',
+                                                padding: '5px 10px',
+                                                borderRadius: '15px',
+                                                fontSize: '12px',
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            {employee.status || 'ACTIVE'}
+                                        </span>
+                                    </td>
                                     <td>
                                         {employee.loginRuleName ? (
                                             <span className="login-rule-badge" title={`Rule ID: ${employee.loginRuleId}`}>
@@ -264,18 +330,24 @@ function EmployeeManagement() {
                                         )}
                                     </td>
                                     <td>{new Date(employee.createdAt).toLocaleDateString()}</td>
-                                    <td>
+                                    <td onClick={(e) => e.stopPropagation()}>
                                         <div className="action-buttons">
                                             <button
                                                 className="btn-edit"
-                                                onClick={() => handleEditEmployee(employee)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEditEmployee(employee);
+                                                }}
                                                 title="Edit Employee"
                                             >
                                                 ✏️
                                             </button>
                                             <button
                                                 className="btn-delete"
-                                                onClick={() => handleDeleteClick(employee)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteClick(employee);
+                                                }}
                                                 title="Delete Employee"
                                             >
                                                 🗑️
@@ -289,131 +361,180 @@ function EmployeeManagement() {
                 </div>
             )}
 
-            {/* Add/Edit Modal */}
-            {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>{modalMode === 'add' ? '➕ Add Employee' : '✏️ Edit Employee'}</h3>
-                            <button className="close-btn" onClick={() => setShowModal(false)}>✕</button>
-                        </div>
-                        {error && <div className="alert alert-error">{error}</div>}
-                        <form onSubmit={handleSubmit}>
-                            <div className="form-group">
-                                <label>User ID *</label>
-                                <input
-                                    type="text"
-                                    name="userId"
-                                    value={formData.userId}
-                                    onChange={handleInputChange}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Password {modalMode === 'add' ? '*' : '(leave blank to keep current)'}</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleInputChange}
-                                    required={modalMode === 'add'}
-                                />
-                            </div>
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>First Name *</label>
-                                    <input
-                                        type="text"
-                                        name="firstName"
-                                        value={formData.firstName}
-                                        onChange={handleInputChange}
-                                        required
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Last Name *</label>
-                                    <input
-                                        type="text"
-                                        name="lastName"
-                                        value={formData.lastName}
-                                        onChange={handleInputChange}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div className="form-group">
-                                <label>Job Role *</label>
-                                <input
-                                    type="text"
-                                    name="jobRole"
-                                    value={formData.jobRole}
-                                    onChange={handleInputChange}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Phone Number *</label>
-                                <input
-                                    type="tel"
-                                    name="phoneNumber"
-                                    value={formData.phoneNumber}
-                                    onChange={handleInputChange}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>Login Rule</label>
-                                <select
-                                    name="loginRuleId"
-                                    value={formData.loginRuleId}
-                                    onChange={handleInputChange}
-                                >
-                                    <option value="">Default (Unrestricted Access)</option>
-                                    {loginRules.map(rule => (
-                                        <option key={rule.id} value={rule.id}>
-                                            {rule.ruleName} ({rule.ruleType})
-                                        </option>
-                                    ))}
-                                </select>
-                                <small style={{ color: '#7f8c8d', fontSize: '12px', marginTop: '5px', display: 'block' }}>
-                                    Controls when this employee can start activity tracking
-                                </small>
-                            </div>
-                            <div className="modal-actions">
-                                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
-                                    Cancel
-                                </button>
-                                <button type="submit" className="btn-primary">
-                                    {modalMode === 'add' ? 'Add Employee' : 'Update Employee'}
-                                </button>
-                            </div>
-                        </form>
+            {/* Pagination Controls */}
+            {
+                filteredEmployees.length > 0 && (
+                    <div className="pagination">
+                        <button
+                            onClick={() => paginate(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="pagination-btn"
+                        >
+                            Previous
+                        </button>
+
+                        <span className="pagination-info">
+                            Page {currentPage} of {totalPages}
+                        </span>
+
+                        <button
+                            onClick={() => paginate(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="pagination-btn"
+                        >
+                            Next
+                        </button>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {/* Add/Edit Modal */}
+            {
+                showModal && (
+                    <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>{modalMode === 'add' ? '➕ Add Employee' : '✏️ Edit Employee'}</h3>
+                                <button className="close-btn" onClick={() => setShowModal(false)}>✕</button>
+                            </div>
+                            {error && <div className="alert alert-error">{error}</div>}
+                            <form onSubmit={handleSubmit}>
+                                <div className="form-group">
+                                    <label>User ID *</label>
+                                    <input
+                                        type="text"
+                                        name="userId"
+                                        value={formData.userId}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Password {modalMode === 'add' ? '*' : '(leave blank to keep current)'}</label>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleInputChange}
+                                        required={modalMode === 'add'}
+                                    />
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>First Name *</label>
+                                        <input
+                                            type="text"
+                                            name="firstName"
+                                            value={formData.firstName}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Last Name *</label>
+                                        <input
+                                            type="text"
+                                            name="lastName"
+                                            value={formData.lastName}
+                                            onChange={handleInputChange}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>Job Role *</label>
+                                    <input
+                                        type="text"
+                                        name="jobRole"
+                                        value={formData.jobRole}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>Phone Number *</label>
+                                    <input
+                                        type="tel"
+                                        name="phoneNumber"
+                                        value={formData.phoneNumber}
+                                        onChange={handleInputChange}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group">
+                                        <label>Status</label>
+                                        <select
+                                            name="status"
+                                            value={formData.status}
+                                            onChange={handleInputChange}
+                                        >
+                                            <option value="ACTIVE">Active</option>
+                                            <option value="INACTIVE">Inactive</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>Login Rule</label>
+                                        <select
+                                            name="loginRuleId"
+                                            value={formData.loginRuleId}
+                                            onChange={handleInputChange}
+                                        >
+                                            <option value="">Default (Unrestricted Access)</option>
+                                            {loginRules.map(rule => (
+                                                <option key={rule.id} value={rule.id}>
+                                                    {rule.ruleName} ({rule.ruleType})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="modal-actions">
+                                    <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="btn-primary">
+                                        {modalMode === 'add' ? 'Add Employee' : 'Update Employee'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* Delete Confirmation Modal */}
-            {showDeleteConfirm && (
-                <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
-                    <div className="modal-content modal-small" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>⚠️ Confirm Delete</h3>
-                            <button className="close-btn" onClick={() => setShowDeleteConfirm(false)}>✕</button>
-                        </div>
-                        <p>Are you sure you want to delete employee <strong>{employeeToDelete?.firstName} {employeeToDelete?.lastName}</strong>?</p>
-                        <p className="warning-text">This action cannot be undone.</p>
-                        <div className="modal-actions">
-                            <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>
-                                Cancel
-                            </button>
-                            <button className="btn-danger" onClick={handleDeleteConfirm}>
-                                Delete
-                            </button>
+            {
+                showDeleteConfirm && (
+                    <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+                        <div className="modal-content modal-small" onClick={(e) => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h3>⚠️ Confirm Delete</h3>
+                                <button className="close-btn" onClick={() => setShowDeleteConfirm(false)}>✕</button>
+                            </div>
+                            <p>Are you sure you want to delete employee <strong>{employeeToDelete?.firstName} {employeeToDelete?.lastName}</strong>?</p>
+                            <p className="warning-text">This action cannot be undone.</p>
+                            <div className="modal-actions">
+                                <button className="btn-secondary" onClick={() => setShowDeleteConfirm(false)}>
+                                    Cancel
+                                </button>
+                                <button className="btn-danger" onClick={handleDeleteConfirm}>
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )
+            }
+
+            {/* Employee Details Modal */}
+            {showDetailsModal && (
+                <EmployeeDetailsModal
+                    employee={detailsEmployee}
+                    onClose={() => setShowDetailsModal(false)}
+                />
             )}
-        </div>
+        </div >
     );
 }
 

@@ -41,6 +41,9 @@ public class User {
     @JoinColumn(name = "login_rule_id")
     private LoginRule loginRule;
 
+    @Column(nullable = true)
+    private String status = "ACTIVE"; // ACTIVE, INACTIVE
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

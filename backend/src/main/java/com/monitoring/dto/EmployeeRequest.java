@@ -27,5 +27,7 @@ public class EmployeeRequest {
     @NotBlank(message = "Phone number is required")
     private String phoneNumber;
 
+    private String status; // Optional - defaults to ACTIVE
+
     private Long loginRuleId; // Optional - defaults to system default rule if not specified
 }

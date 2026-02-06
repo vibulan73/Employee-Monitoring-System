@@ -98,20 +98,52 @@ public class MonitoringAgent extends Application {
         ui.start(stage);
     }
 
+    // Track current active task model from UI
+    private com.monitoring.agent.ui.TaskSessionModel currentTaskModel;
+
     public void startMonitoring() {
         if (isMonitoring) {
             logger.warn("Monitoring already started");
             return;
         }
 
+        // Global start - starts session with default name
+        startMonitoringInternal("General Session", 0L);
+    }
+
+    // Overload for starting a specific task from Table
+    public void startTask(com.monitoring.agent.ui.TaskSessionModel taskModel) {
+        this.currentTaskModel = taskModel;
+        // If we are already monitoring globally, we just switch context
+        if (!isMonitoring) {
+            startMonitoringInternal(taskModel.getTaskName(), Long.parseLong(taskModel.getEstimatedTime()));
+        } else {
+            // Just switch the active task being tracked
+            ui.updateStatus("Working on: " + taskModel.getTaskName(), Color.web("#27ae60"));
+        }
+
+        // Resume if it was paused
+        if (isPaused) {
+            togglePause();
+        }
+    }
+
+    public void stopTask(com.monitoring.agent.ui.TaskSessionModel taskModel) {
+        if (this.currentTaskModel == taskModel) {
+            this.currentTaskModel = null;
+            ui.updateStatus("Monitoring Active (No specific task)", Color.web("#27ae60"));
+        }
+    }
+
+    private void startMonitoringInternal(String taskName, Long estimatedDurationMinutes) {
         String userId = currentUser.getUserId();
 
         try {
             // Start session on backend
-            SessionResponse session = backendClient.startSession(userId);
+            SessionResponse session = backendClient.startSession(userId, taskName, estimatedDurationMinutes);
             currentSessionId = session.getSessionId();
 
-            logger.info("Started monitoring session: {}", currentSessionId);
+            logger.info("Started monitoring session: {} for task: {}", currentSessionId, taskName);
 
             // Start activity monitoring
             activityMonitor.start();
@@ -158,7 +190,7 @@ public class MonitoringAgent extends Application {
 
             // Update UI
             ui.setMonitoringStarted(true);
-            ui.updateStatus("Monitoring Active", Color.web("#27ae60"));
+            ui.updateStatus("Working on: " + taskName, Color.web("#27ae60"));
             ui.updateSessionId(currentSessionId.toString());
 
         } catch (Exception e) {
@@ -167,10 +199,8 @@ public class MonitoringAgent extends Application {
             // Check if it's a tracking restriction error
             String errorMessage = e.getMessage();
             if (errorMessage != null && errorMessage.startsWith("TRACKING_NOT_ALLOWED:")) {
-                // Parse the error to extract the next allowed window message
                 try {
                     String jsonPart = errorMessage.substring("TRACKING_NOT_ALLOWED:".length()).trim();
-                    // Extract the message field from JSON
                     String nextWindow = "Contact your administrator";
                     if (jsonPart.contains("\"nextAllowedWindow\"")) {
                         int start = jsonPart.indexOf("\"nextAllowedWindow\":\"") + "\"nextAllowedWindow\":\"".length();
@@ -220,6 +250,7 @@ public class MonitoringAgent extends Application {
 
             isMonitoring = false;
             currentSessionId = null;
+            currentTaskModel = null; // Clear active task
 
             // Update UI
             ui.setMonitoringStarted(false);
@@ -286,9 +317,6 @@ public class MonitoringAgent extends Application {
             ui.updatePausedTimer(formatDuration(pausedDurationSeconds + currentPauseDuration));
         } else {
             // Check current activity status immediately
-            // This ensures the UI updates instantly when user becomes active after being
-            // idle
-            // instead of waiting for the next log interval
             String currentStatus = activityMonitor.getActivityStatus();
             if (!currentStatus.equals(lastActivityStatus)) {
                 lastActivityStatus = currentStatus;
@@ -301,6 +329,12 @@ public class MonitoringAgent extends Application {
                 idleDurationSeconds++;
             }
             ui.updatePausedTimer(formatDuration(pausedDurationSeconds));
+
+            // Increment logic for specific Task
+            if (currentTaskModel != null
+                    && currentTaskModel.getStatus() == com.monitoring.agent.ui.TaskSessionModel.TaskStatus.ACTIVE) {
+                javafx.application.Platform.runLater(() -> currentTaskModel.incrementDuration());
+            }
         }
 
         // Update UI
@@ -320,11 +354,16 @@ public class MonitoringAgent extends Application {
         if (!isMonitoring || isPaused)
             return;
 
+        UUID sid = this.currentSessionId;
+        if (sid == null) {
+            return;
+        }
+
         try {
             com.monitoring.agent.model.ScreenshotData screenshotData = screenshotCapture
-                    .captureScreenshot("screenshot_" + currentSessionId);
+                    .captureScreenshot("screenshot_" + sid);
             backendClient.uploadScreenshot(
-                    currentSessionId,
+                    sid,
                     screenshotData.getFile(),
                     screenshotData.getMetadata());
             logger.info("Screenshot uploaded successfully");
@@ -446,10 +485,6 @@ public class MonitoringAgent extends Application {
         }
     }
 
-    /**
-     * Stop monitoring locally without calling backend
-     * Used when backend has already stopped the session
-     */
     private void stopMonitoringLocal() {
         if (!isMonitoring) {
             return;
@@ -470,6 +505,7 @@ public class MonitoringAgent extends Application {
 
         isMonitoring = false;
         currentSessionId = null;
+        currentTaskModel = null;
 
         // Reset all timer variables to prevent issues on next session start
         sessionStartTime = 0;

@@ -18,6 +18,7 @@ public class EmployeeResponse {
     private String lastName;
     private String jobRole;
     private String phoneNumber;
+    private String status;
     private LocalDateTime createdAt;
     private Long loginRuleId;
     private String loginRuleName;
@@ -30,6 +31,7 @@ public class EmployeeResponse {
         response.setLastName(user.getLastName());
         response.setJobRole(user.getJobRole());
         response.setPhoneNumber(user.getPhoneNumber());
+        response.setStatus(user.getStatus());
         response.setCreatedAt(user.getCreatedAt());
 
         // Include login rule information if available
