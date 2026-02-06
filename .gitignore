@@ -50,3 +50,14 @@ tokens/
 note.txt
 Notes.txt
 
+
+# Documentation binaries and clutter
+*.docx
+LOCAL_RUN_INSTRUCTIONS.txt
+
+# Documentation Markdown (Keep only README)
+*.md
+!README.md
+!backend/README.md
+!desktop-agent/README.md
+!web-ui/README.md
