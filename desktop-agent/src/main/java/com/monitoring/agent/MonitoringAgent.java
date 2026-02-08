@@ -48,6 +48,9 @@ public class MonitoringAgent extends Application {
     private boolean isPaused = false;
     private long pauseStartTime;
 
+    // Task switching flag to prevent recursive stop calls
+    private boolean isSwitchingTask = false;
+
     // Configuration
     private String backendUrl;
     private double screenshotIntervalMinutes;
@@ -114,18 +117,35 @@ public class MonitoringAgent extends Application {
     // Overload for starting a specific task from Table
     public void startTask(com.monitoring.agent.ui.TaskSessionModel taskModel) {
         this.currentTaskModel = taskModel;
-        // If we are already monitoring globally, we just switch context
-        if (!isMonitoring) {
-            startMonitoringInternal(taskModel.getTaskName(), Long.parseLong(taskModel.getEstimatedTime()));
-        } else {
-            // Just switch the active task being tracked
-            ui.updateStatus("Working on: " + taskModel.getTaskName(), Color.web("#27ae60"));
+
+        // If monitoring is already running, stop it first before starting with new task
+        if (isMonitoring) {
+            logger.info("Switching from current session to task: {}", taskModel.getTaskName());
+            // Set flag to prevent recursive stop calls (must stay true until UI callbacks
+            // finish)
+            isSwitchingTask = true;
+            // Stop the current session
+            stopMonitoring();
+            // DON'T reset flag yet - Platform.runLater callbacks haven't executed
         }
+
+        // Start monitoring with the specific task name and estimated duration
+        startMonitoringInternal(taskModel.getTaskName(), Long.parseLong(taskModel.getEstimatedTime()));
+
+        // Reset flag AFTER UI thread processes all callbacks
+        javafx.application.Platform.runLater(() -> {
+            isSwitchingTask = false;
+            logger.info("isSwitchingTask flag reset to false");
+        });
 
         // Resume if it was paused
         if (isPaused) {
             togglePause();
         }
+    }
+
+    public boolean isSwitchingTask() {
+        return isSwitchingTask;
     }
 
     public void stopTask(com.monitoring.agent.ui.TaskSessionModel taskModel) {
@@ -139,9 +159,19 @@ public class MonitoringAgent extends Application {
         String userId = currentUser.getUserId();
 
         try {
+            // DEBUG: Log task data being sent to backend
+            logger.info("=== DESKTOP AGENT START SESSION ===");
+            logger.info("Sending startSession request - userId: {}, taskName: '{}', estimatedDuration: {}",
+                    userId, taskName, estimatedDurationMinutes);
+
             // Start session on backend
             SessionResponse session = backendClient.startSession(userId, taskName, estimatedDurationMinutes);
             currentSessionId = session.getSessionId();
+
+            // DEBUG: Log response from backend
+            logger.info("Received session response - sessionId: {}, taskName: '{}', estimatedDuration: {}",
+                    session.getSessionId(), session.getTaskName(), session.getEstimatedDurationMinutes());
+            logger.info("=== END DESKTOP AGENT START SESSION ===");
 
             logger.info("Started monitoring session: {} for task: {}", currentSessionId, taskName);
 
@@ -228,6 +258,11 @@ public class MonitoringAgent extends Application {
             return;
         }
 
+        // DEBUG: Log who's calling stopMonitoring
+        logger.info("=== STOP MONITORING CALLED ===");
+        logger.info("isSwitchingTask flag: {}", isSwitchingTask);
+        logger.info("Stack trace:", new Exception("Stack trace"));
+
         // If paused, calculate final paused duration
         if (isPaused) {
             long pauseDuration = (System.currentTimeMillis() - pauseStartTime) / 1000;
@@ -252,12 +287,16 @@ public class MonitoringAgent extends Application {
             currentSessionId = null;
             currentTaskModel = null; // Clear active task
 
-            // Update UI
-            ui.setMonitoringStarted(false);
-            ui.updateStatus("Monitoring Stopped", Color.web("#7f8c8d"));
-            ui.updateActivity("N/A");
-            ui.updateSessionId("");
-            ui.resetTimers();
+            // Update UI (skip if we're switching tasks to prevent recursive stop)
+            if (!isSwitchingTask) {
+                ui.setMonitoringStarted(false);
+                ui.updateStatus("Monitoring Stopped", Color.web("#7f8c8d"));
+                ui.updateActivity("N/A");
+                ui.updateSessionId("");
+                ui.resetTimers();
+            } else {
+                logger.info("Skipping UI updates during task switch");
+            }
 
         } catch (Exception e) {
             logger.error("Failed to stop monitoring", e);

@@ -342,16 +342,6 @@ function EmployeeManagement() {
                                             >
                                                 ✏️
                                             </button>
-                                            <button
-                                                className="btn-delete"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteClick(employee);
-                                                }}
-                                                title="Delete Employee"
-                                            >
-                                                🗑️
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>

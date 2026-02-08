@@ -136,6 +136,7 @@ const EmployeeDetailsModal = ({ employee, onClose }) => {
                                             <th>Date</th>
                                             <th>Start Time</th>
                                             <th>End Time</th>
+                                            <th>Task Name</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
@@ -147,6 +148,9 @@ const EmployeeDetailsModal = ({ employee, onClose }) => {
                                                     <td>{new Date(session.startTime).toLocaleDateString()}</td>
                                                     <td>{new Date(session.startTime).toLocaleTimeString()}</td>
                                                     <td>{session.endTime ? new Date(session.endTime).toLocaleTimeString() : '-'}</td>
+                                                    <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {session.taskName || '-'}
+                                                    </td>
                                                     <td>
                                                         <span className={`status-badge ${session.status === 'ACTIVE' ? 'active' : 'inactive'}`}>
                                                             {session.status}
@@ -156,7 +160,7 @@ const EmployeeDetailsModal = ({ employee, onClose }) => {
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="5" style={{ textAlign: 'center', color: '#999' }}>No sessions found for this period</td>
+                                                <td colSpan="6" style={{ textAlign: 'center', color: '#999' }}>No sessions found for this period</td>
                                             </tr>
                                         )}
                                     </tbody>

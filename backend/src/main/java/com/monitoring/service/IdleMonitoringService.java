@@ -36,13 +36,24 @@ public class IdleMonitoringService {
     /**
      * Check for idle sessions every 5 minutes
      */
-    @Scheduled(fixedDelayString = "#{${monitoring.idle.check-interval-minutes:5} * 60000}", initialDelay = 60000)
+    // Check every 1 minute (60000 ms)
+    @Scheduled(fixedDelay = 60000, initialDelay = 60000)
     @Transactional
     public void checkIdleSessions() {
-        log.debug("Checking for idle sessions...");
+        log.info("=== CHECKING FOR IDLE SESSIONS ===");
 
         List<WorkSession> activeSessions = sessionRepository
                 .findByStatusOrderByStartTimeDesc(WorkSession.SessionStatus.ACTIVE);
+
+        log.info("Found {} active sessions to check", activeSessions.size());
+
+        // DEBUG: Log all sessions to see what's in the database
+        List<WorkSession> allSessions = sessionRepository.findAll();
+        log.info("DEBUG: Total sessions in database: {}", allSessions.size());
+        for (WorkSession s : allSessions) {
+            log.info("DEBUG: Session {} - Status: {}, User: {}, Task: {}",
+                    s.getId(), s.getStatus(), s.getUserId(), s.getTaskName());
+        }
 
         for (WorkSession session : activeSessions) {
             try {
@@ -54,23 +65,29 @@ public class IdleMonitoringService {
     }
 
     private void processSession(WorkSession session) {
+        log.info("Processing session {} for user {}", session.getId(), session.getUserId());
+
         // Get the most recent activity logs (last 15 minutes)
         LocalDateTime fifteenMinutesAgo = LocalDateTime.now().minusMinutes(15);
         List<ActivityLog> recentLogs = activityLogRepository
                 .findBySessionIdAndLoggedAtAfterOrderByLoggedAtDesc(session.getId(), fifteenMinutesAgo);
 
         if (recentLogs.isEmpty()) {
-            log.debug("No recent activity for session {}, skipping", session.getId());
+            log.info("No recent activity logs for session {}, skipping", session.getId());
             return;
         }
+
+        log.info("Found {} recent activity logs for session {}", recentLogs.size(), session.getId());
 
         // Check if user has been continuously idle
         int continuousIdleMinutes = calculateContinuousIdleMinutes(recentLogs);
 
-        log.debug("Session {} has {} continuous idle minutes", session.getId(), continuousIdleMinutes);
+        log.info("Session {} has {} continuous idle minutes (warning threshold: {}, auto-stop threshold: {})",
+                session.getId(), continuousIdleMinutes, warningMinutes, autoStopMinutes);
 
         // Auto-stop if idle for configured threshold (default 60 minutes)
         if (continuousIdleMinutes >= autoStopMinutes) {
+            log.info("Session {} exceeds auto-stop threshold, stopping session", session.getId());
             autoStopSession(session, continuousIdleMinutes);
             return;
         }
@@ -78,7 +95,12 @@ public class IdleMonitoringService {
         // Send warning email if idle for configured threshold (default 30 minutes) and
         // not already sent
         if (continuousIdleMinutes >= warningMinutes && !Boolean.TRUE.equals(session.getIdleWarningSent())) {
+            log.info("Session {} exceeds warning threshold and warning not sent, sending warning", session.getId());
             sendIdleWarning(session, continuousIdleMinutes);
+        } else if (continuousIdleMinutes >= warningMinutes) {
+            log.info("Session {} exceeds warning threshold but warning already sent", session.getId());
+        } else {
+            log.info("Session {} idle time below warning threshold", session.getId());
         }
     }
 

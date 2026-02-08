@@ -35,6 +35,11 @@ public class SessionService {
 
     @Transactional
     public WorkSession startSession(String userId, String taskName, Long estimatedDurationMinutes) {
+        // DEBUG: Log incoming task data
+        log.info("=== START SESSION DEBUG ===");
+        log.info("Received startSession request - userId: {}, taskName: '{}', estimatedDuration: {}",
+                userId, taskName, estimatedDurationMinutes);
+
         // Get user and check if tracking is allowed
         User user = userRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
@@ -69,6 +74,12 @@ public class SessionService {
         session.setStatus(WorkSession.SessionStatus.ACTIVE);
 
         WorkSession savedSession = sessionRepository.save(session);
+
+        // DEBUG: Log saved session data
+        log.info("Saved session to database - sessionId: {}, taskName: '{}', estimatedDuration: {}",
+                savedSession.getId(), savedSession.getTaskName(), savedSession.getEstimatedDurationMinutes());
+        log.info("=== END SESSION DEBUG ===");
+
         log.info("Started new session {} for user {} with task: {}", savedSession.getId(), userId, taskName);
 
         // Broadcast session creation via WebSocket

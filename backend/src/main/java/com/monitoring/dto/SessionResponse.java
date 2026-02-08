@@ -19,17 +19,22 @@ public class SessionResponse {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private WorkSession.SessionStatus status;
+    private String taskName;
+    private Long estimatedDurationMinutes;
 
     public static SessionResponse from(WorkSession session) {
-        return new SessionResponse(
-                session.getId(),
-                session.getUserId(),
-                null, // firstName - to be populated by service
-                null, // lastName - to be populated by service
-                null, // jobRole - to be populated by service
-                session.getStartTime(),
-                session.getEndTime(),
-                session.getStatus());
+        SessionResponse response = new SessionResponse();
+        response.setSessionId(session.getId());
+        response.setUserId(session.getUserId());
+        response.setFirstName(null); // to be populated by service
+        response.setLastName(null); // to be populated by service
+        response.setJobRole(null); // to be populated by service
+        response.setStartTime(session.getStartTime());
+        response.setEndTime(session.getEndTime());
+        response.setStatus(session.getStatus());
+        response.setTaskName(session.getTaskName());
+        response.setEstimatedDurationMinutes(session.getEstimatedDurationMinutes());
+        return response;
     }
 
     // Manual Getters and Setters
@@ -95,5 +100,21 @@ public class SessionResponse {
 
     public void setStatus(WorkSession.SessionStatus status) {
         this.status = status;
+    }
+
+    public String getTaskName() {
+        return taskName;
+    }
+
+    public void setTaskName(String taskName) {
+        this.taskName = taskName;
+    }
+
+    public Long getEstimatedDurationMinutes() {
+        return estimatedDurationMinutes;
+    }
+
+    public void setEstimatedDurationMinutes(Long estimatedDurationMinutes) {
+        this.estimatedDurationMinutes = estimatedDurationMinutes;
     }
 }

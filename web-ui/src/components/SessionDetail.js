@@ -213,6 +213,20 @@ function SessionDetail() {
                         <label>Duration</label>
                         <div>{calculateDuration(session.startTime, session.endTime)}</div>
                     </div>
+                    {session.taskName && (
+                        <div className="metadata-item">
+                            <label>Task Name</label>
+                            <div style={{ fontSize: '16px', fontWeight: '600', color: '#667eea' }}>
+                                {session.taskName}
+                            </div>
+                        </div>
+                    )}
+                    {session.estimatedDurationMinutes && (
+                        <div className="metadata-item">
+                            <label>Estimated Duration</label>
+                            <div>{session.estimatedDurationMinutes} minutes</div>
+                        </div>
+                    )}
                 </div>
             </div>
 

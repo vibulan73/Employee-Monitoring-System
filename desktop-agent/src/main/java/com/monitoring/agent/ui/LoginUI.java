@@ -95,9 +95,9 @@ public class LoginUI {
                         "-fx-cursor: hand;"));
 
         // Signup link
-        signupLink = new Hyperlink("Don't have an account? Sign up");
-        signupLink.setFont(Font.font("System", 12));
-        signupLink.setOnAction(e -> showSignupScreen());
+        // signupLink = new Hyperlink("Don't have an account? Sign up");
+        // signupLink.setFont(Font.font("System", 12));
+        // signupLink.setOnAction(e -> showSignupScreen());
 
         // Press Enter to login
         passwordField.setOnAction(e -> handleLogin());
@@ -116,8 +116,8 @@ public class LoginUI {
                 passwordLabel,
                 passwordField,
                 errorLabel,
-                loginButton,
-                signupLink);
+                loginButton);
+        // signupLink);
 
         Scene scene = new Scene(layout, 500, 600);
         stage.setScene(scene);

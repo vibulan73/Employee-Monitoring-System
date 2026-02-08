@@ -30,6 +30,12 @@ public class SessionResponse {
     @JsonProperty("status")
     private String status;
 
+    @JsonProperty("taskName")
+    private String taskName;
+
+    @JsonProperty("estimatedDurationMinutes")
+    private Long estimatedDurationMinutes;
+
     // Getters and setters
     public UUID getSessionId() {
         return sessionId;
@@ -93,5 +99,21 @@ public class SessionResponse {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getTaskName() {
+        return taskName;
+    }
+
+    public void setTaskName(String taskName) {
+        this.taskName = taskName;
+    }
+
+    public Long getEstimatedDurationMinutes() {
+        return estimatedDurationMinutes;
+    }
+
+    public void setEstimatedDurationMinutes(Long estimatedDurationMinutes) {
+        this.estimatedDurationMinutes = estimatedDurationMinutes;
     }
 }

@@ -1,7 +1,7 @@
 /* Employee Details Modal Styles */
 .modal-large {
-    width: 600px;
-    max-width: 90%;
+    width: 900px !important;
+    max-width: 95% !important;
 }
 
 .modal-body {

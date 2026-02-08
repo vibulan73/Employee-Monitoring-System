@@ -257,7 +257,7 @@ public class AgentUI {
         breakReasonComboBox.getItems().addAll("Tea Break", "Lunch Break", "Personal Break", "Meeting", "Other");
         breakReasonComboBox.setPromptText("Break Reason");
         breakReasonComboBox.setOnAction(e -> {
-            if (breakReasonComboBox.getValue() != null && !startButton.isDisabled()) {
+            if (breakReasonComboBox.getValue() != null && startButton.isDisabled()) {
                 pauseButton.setDisable(false);
             }
         });
@@ -423,7 +423,8 @@ public class AgentUI {
     public void setMonitoringStarted(boolean started) {
         // Handled in handleStart/Stop mostly, but for external triggers:
         Platform.runLater(() -> {
-            if (!started && startButton.isDisabled()) {
+            // Don't trigger handleStop if we're in the middle of switching tasks
+            if (!started && startButton.isDisabled() && !agent.isSwitchingTask()) {
                 handleStop(); // Sync UI if backend stopped it
             }
         });
